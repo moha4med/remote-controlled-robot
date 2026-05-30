@@ -1,17 +1,26 @@
-import cv2
+from picamera2 import Picamera2
+import time
+import threading
 
-camera = cv2.VideoCapture(0)
+class Camera:
+    def __init__(self):
+        self.picam2 = Picamera2()
+        self.lock = threading.Lock()
 
-def generate_frames():
-    while True:
-        success, frame = camera.read()
+        config = self.picam2.create_still_configuration(
+            main={"size": (1920, 1080)}
+        )
 
-        if not success:
-            break
-        else:
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
+        self.picam2.configure(config)
+        self.picam2.start()
 
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            
+        time.sleep(2)
+
+    def capture_image(self, path="image.jpg"):
+        self.picam2.capture_file(path)
+        return path
+
+    def get_frame(self):
+        with self.lock:
+            frame = self.picam2.capture_array()
+        return frame

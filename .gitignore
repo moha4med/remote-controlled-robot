@@ -12,3 +12,8 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Ignore secrets and environment variables
+.env
+*.env
+secrets.json
