@@ -1,10 +1,10 @@
+# app/routes/video.py
+
 from flask import Blueprint, Response, send_file
 from app.services.stream_service import generate_stream
-from app.sensors.camera import Camera
+from app.sensors.camera import camera
 
 video_bp = Blueprint('video', __name__)
-
-camera = Camera()
 
 @video_bp.route('/video_feed')
 def video_feed():
