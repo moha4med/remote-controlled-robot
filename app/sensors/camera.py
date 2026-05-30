@@ -24,3 +24,6 @@ class Camera:
         with self.lock:
             frame = self.picam2.capture_array()
         return frame
+
+
+camera = Camera()

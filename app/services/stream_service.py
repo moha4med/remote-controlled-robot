@@ -1,9 +1,7 @@
 # app/services/stream_service.py
 
 import cv2
-from app.sensors.camera import Camera
-
-camera = Camera()
+from app.sensors.camera import camera
 
 def generate_stream():
     while True:
