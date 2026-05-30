@@ -9,6 +9,8 @@ def generate_stream():
     while True:
         frame = camera.get_frame()
 
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
         _, buffer = cv2.imencode('.jpg', frame)
         frame_bytes = buffer.tobytes()
 

@@ -8,7 +8,7 @@ class Camera:
         self.lock = threading.Lock()
 
         config = self.picam2.create_still_configuration(
-            main={"size": (1920, 1080)}
+            main={"size": (1280, 720), "format": "RGB888"}
         )
 
         self.picam2.configure(config)
