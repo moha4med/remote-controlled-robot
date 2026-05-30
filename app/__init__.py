@@ -1,3 +1,5 @@
+# app/__init__.py
+
 from flask import Flask
 from app.routes.video import video_bp
 
