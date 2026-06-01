@@ -37,7 +37,7 @@ class Camera:
         frame = self.get_frame()
 
         save_dir = "app/static/captures"
-        os.makedirs(save_dir, exists_ok=True)
+        os.makedirs(save_dir, exist_ok=True)
 
         filename = f"capture_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
         full_path = os.path.join(save_dir, filename)
