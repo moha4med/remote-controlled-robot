@@ -1,5 +1,7 @@
 # app/sensors/camera.py
 
+import os
+from datetime import datetime
 from picamera2 import Picamera2
 import cv2
 import time
@@ -33,7 +35,15 @@ class Camera:
     
     def capture_image(self, filename):
         frame = self.get_frame()
-        cv2.imwrite(filename, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-        return filename
+
+        save_dir = "app/static/captures"
+        os.makedirs(save_dir, exists_ok=True)
+
+        filename = f"capture_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+        full_path = os.path.join(save_dir, filename)
+
+        cv2.imwrite(full_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+
+        return full_path
 
 camera = Camera()

@@ -19,7 +19,7 @@ def video_feed():
 
 @video_bp.route('/capture')
 def capture():
-    path = camera.capture_image("capture.jpg")
+    path = camera.capture_image()
 
     return send_file(
         path,
