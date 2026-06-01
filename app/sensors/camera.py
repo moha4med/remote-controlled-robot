@@ -33,7 +33,7 @@ class Camera:
         frame = self.picam2.capture_array()
         return frame
     
-    def capture_image(self, filename):
+    def capture_image(self):
         frame = self.get_frame()
 
         save_dir = "app/static/captures"
