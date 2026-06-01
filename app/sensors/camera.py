@@ -7,6 +7,10 @@ import cv2
 import time
 import threading
 
+BASE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
+
 class Camera:
     _instance = None
 
@@ -36,7 +40,7 @@ class Camera:
     def capture_image(self):
         frame = self.get_frame()
 
-        save_dir = "app/static/captures"
+        save_dir = os.path.join(BASE_DIR, "app", "static", "captures")
         os.makedirs(save_dir, exist_ok=True)
 
         filename = f"capture_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
