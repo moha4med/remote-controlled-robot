@@ -46,7 +46,7 @@ class Camera:
         filename = f"capture_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
         full_path = os.path.join(save_dir, filename)
 
-        cv2.imwrite(full_path, cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(full_path, frame)
 
         return full_path
 
