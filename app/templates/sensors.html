@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robot Sensors</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style/design-tokens.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style/sensors.css') }}"
+    />
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  </head>
+  <body class="page-sensors">
+    <div class="app-shell sensors-shell" data-sensors-dashboard>
+      <nav
+        class="sidebar fixed inset-x-0 top-0 z-50 hidden w-full max-h-screen min-h-screen md:static md:z-auto md:flex md:flex-col md:w-16 md:max-h-none md:min-h-0"
+        id="mobileSidebar"
+        aria-label="Primary navigation"
+      >
+        <div class="sidebar-logo" aria-hidden="true">RC</div>
+        <ul class="sidebar-nav">
+          <li>
+            <a class="nav-item" href="{{ url_for('video.dashboard') }}" aria-label="Dashboard">
+              <i data-feather="activity"></i>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item" href="{{ url_for('video.control') }}" aria-label="Control">
+              <i data-feather="sliders"></i>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item active" href="{{ url_for('video.sensors') }}" aria-label="Sensors">
+              <i data-feather="bar-chart-2"></i>
+            </a>
+          </li>
+        </ul>
+        <div class="flex flex-col gap-2 mt-auto">
+          <button
+            class="btn-icon btn-icon--square"
+            type="button"
+            data-theme-toggle
+            aria-label="Switch to light mode"
+            aria-pressed="false"
+          >
+            <i data-feather="sun"></i>
+          </button>
+          <button
+            class="btn-icon btn-icon--square"
+            type="button"
+            id="sidebarFullscreen"
+            aria-label="Enter fullscreen"
+          >
+            <i data-feather="maximize"></i>
+          </button>
+        </div>
+        <div class="sidebar-footer">
+          <div class="avatar" aria-hidden="true"></div>
+          <button class="btn-icon btn-icon--square" type="button" aria-label="Power">
+            <i data-feather="power"></i>
+          </button>
+        </div>
+      </nav>
+
+      <main class="main-content sensors-main">
+        <div class="panel-grid sensors-grid">
+          <section class="panel sensors-panel sensors-kpi">
+            <div class="panel__header">
+              <div>
+                <p class="panel__eyebrow">Overview</p>
+                <h2 class="panel__title">Sensor KPIs</h2>
+              </div>
+              <span class="badge badge--online">
+                <span class="status-dot status-dot--online" aria-hidden="true"></span>
+                Live
+              </span>
+            </div>
+            <div class="value-grid">
+              <article class="value-card">
+                <div class="value-card__label">
+                  <i data-feather="thermometer"></i>
+                  Temp
+                </div>
+                <div class="value-card__value" id="tempValueCard">--</div>
+                <span id="tempValue" class="visually-hidden">--</span>
+              </article>
+              <article class="value-card">
+                <div class="value-card__label">
+                  <i data-feather="droplet"></i>
+                  Humidity
+                </div>
+                <div class="value-card__value" id="humidityValueCard">--</div>
+                <span id="humidityValue" class="visually-hidden">--</span>
+              </article>
+              <article class="value-card">
+                <div class="value-card__label">
+                  <i data-feather="activity"></i>
+                  Sampling
+                </div>
+                <div class="value-card__value">2.5s</div>
+              </article>
+              <article class="value-card">
+                <div class="value-card__label">
+                  <i data-feather="clock"></i>
+                  Last Sync
+                </div>
+                <div class="value-card__value" id="sensorSync">--:--:--</div>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel sensors-panel chart-shell">
+            <div class="panel__header">
+              <div>
+                <p class="panel__eyebrow">Temperature</p>
+                <h2 class="panel__title">Thermal Trend</h2>
+              </div>
+              <span class="badge">
+                <span class="status-dot status-dot--online" aria-hidden="true"></span>
+                Live
+              </span>
+            </div>
+            <div id="tempChart" class="sensor-chart" role="img" aria-label="Temperature trend chart"></div>
+          </section>
+
+          <section class="panel sensors-panel chart-shell">
+            <div class="panel__header">
+              <div>
+                <p class="panel__eyebrow">Humidity</p>
+                <h2 class="panel__title">Humidity Trend</h2>
+              </div>
+              <span class="badge">
+                <span class="status-dot status-dot--online" aria-hidden="true"></span>
+                Live
+              </span>
+            </div>
+            <div id="humidityChart" class="sensor-chart" role="img" aria-label="Humidity trend chart"></div>
+          </section>
+
+        </div>
+      </main>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.24/dist/uPlot.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.24/dist/uPlot.iife.min.js"></script>
+    <script src="{{ url_for('static', filename='js/sensors.plugin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/page-init.js') }}"></script>
+  </body>
+</html>

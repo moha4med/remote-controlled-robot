@@ -1,0 +1,61 @@
+@import url("./design-tokens.css");
+
+body.page-sensors {
+  background: var(--bg-app);
+}
+
+.sensors-shell {
+  align-items: stretch;
+}
+
+.sensors-main {
+  display: grid;
+  height: 100%;
+}
+
+.sensors-grid {
+  height: 100%;
+}
+
+.sensors-panel {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.chart-shell {
+  min-height: 220px;
+  height: 220px;
+  position: relative;
+}
+
+.chart-shell canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sensor-chart {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.sensors-kpi .value-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .panel-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .sensors-kpi .value-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
