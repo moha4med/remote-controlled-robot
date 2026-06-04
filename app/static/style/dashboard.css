@@ -1,0 +1,41 @@
+@import url("./design-tokens.css");
+
+body.page-dashboard {
+  background: var(--bg-app);
+}
+
+.dashboard-shell {
+  align-items: stretch;
+}
+
+.dashboard-main {
+  display: grid;
+  height: 100%;
+}
+
+.dashboard-grid {
+  height: 100%;
+}
+
+.dashboard-panel {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.dashboard-panel .camera-stage {
+  min-height: 100%;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+@media (max-width: 1180px) {
+  .panel-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+}

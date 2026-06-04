@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Robot Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style/design-tokens.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style/dashboard.css') }}"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="page-dashboard">
+    <div class="app-shell dashboard-shell" data-dashboard-board>
+      <nav
+        class="sidebar fixed inset-x-0 top-0 z-50 hidden w-full max-h-screen min-h-screen md:static md:z-auto md:flex md:flex-col md:w-16 md:max-h-none md:min-h-0"
+        id="mobileSidebar"
+        aria-label="Primary navigation"
+      >
+        <div class="sidebar-logo" aria-hidden="true">RC</div>
+        <ul class="sidebar-nav">
+          <li>
+            <a class="nav-item active" href="{{ url_for('video.dashboard') }}" aria-label="Dashboard">
+              <i data-feather="activity"></i>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item" href="{{ url_for('video.control') }}" aria-label="Control">
+              <i data-feather="sliders"></i>
+            </a>
+          </li>
+          <li>
+            <a class="nav-item" href="{{ url_for('video.sensors') }}" aria-label="Sensors">
+              <i data-feather="bar-chart-2"></i>
+            </a>
+          </li>
+        </ul>
+        <div class="flex flex-col gap-2 mt-auto">
+          <button
+            class="btn-icon btn-icon--square"
+            type="button"
+            data-theme-toggle
+            aria-label="Switch to light mode"
+            aria-pressed="false"
+          >
+            <i data-feather="sun"></i>
+          </button>
+          <button
+            class="btn-icon btn-icon--square"
+            type="button"
+            id="sidebarFullscreen"
+            aria-label="Enter fullscreen"
+          >
+            <i data-feather="maximize"></i>
+          </button>
+        </div>
+        <div class="sidebar-footer">
+          <div class="avatar" aria-hidden="true"></div>
+          <button class="btn-icon btn-icon--square" type="button" aria-label="Power">
+            <i data-feather="power"></i>
+          </button>
+        </div>
+      </nav>
+
+      <main class="main-content dashboard-main">
+        <header class="page-header">
+          <div class="lead-stack">
+            <p class="page-eyebrow">
+              <i data-feather="camera" aria-hidden="true"></i>
+              Camera Hub
+            </p>
+            <h1 class="page-title">Live Robot Feed</h1>
+            <p class="page-subtitle">
+              A landing view for the telemetry suite. The layout follows the DJI Mavic Pro style guide while staying inside the approved robotics palette.
+            </p>
+          </div>
+          <div class="status-row">
+            <span class="badge badge--online">
+              <span class="status-dot status-dot--online" aria-hidden="true"></span>
+              Live
+            </span>
+            <span class="badge badge--busy">
+              <span class="status-dot status-dot--busy" aria-hidden="true"></span>
+              Stream Ready
+            </span>
+          </div>
+        </header>
+
+        <div class="panel-grid dashboard-grid">
+          <section class="panel panel--feed dashboard-panel">
+            <div class="camera-stage">
+              <img
+                src="{{ url_for('static', filename='images/camera_fade_frame_save_011.png') }}"
+                alt="Camera preview from the robot feed"
+                class="camera-stage__image"
+              />
+              <div class="feed-overlay">
+                <div class="feed-grid-line vertical grid-1"></div>
+                <div class="feed-grid-line vertical grid-2"></div>
+                <div class="feed-grid-line horizontal grid-3"></div>
+                <div class="feed-grid-line horizontal grid-4"></div>
+                <div class="feed-reticle"></div>
+              </div>
+              <div class="camera-overlay camera-overlay--top">
+                <span class="overlay-chip overlay-chip--accent">
+                  <span class="status-dot status-dot--live" aria-hidden="true"></span>
+                  Live Stream
+                </span>
+                <span class="overlay-chip">Frame Sync 12 ms</span>
+              </div>
+              <div class="camera-overlay camera-overlay--bottom">
+                <span class="overlay-chip overlay-chip--danger">
+                  <span class="status-dot status-dot--live" aria-hidden="true"></span>
+                  REC 00:12:48
+                </span>
+                <span class="overlay-chip overlay-chip--success">
+                  <i data-feather="shield"></i>
+                  Stream OK
+                </span>
+              </div>
+            </div>
+            <div class="status-bar">
+              <div class="status-bar__group">
+                <span class="status-dot status-dot--online" aria-hidden="true"></span>
+                <span class="status-label">Telemetry live</span>
+              </div>
+              <div class="status-bar__group">
+                <span class="status-label">Last update</span>
+                <span id="dashboardTimestamp">12:42:18</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel dashboard-panel">
+            <div class="panel__header">
+              <div>
+                <p class="panel__eyebrow">Robot Status</p>
+                <h2 class="panel__title">Core Telemetry</h2>
+              </div>
+              <span class="badge badge--busy">
+                <span class="status-dot status-dot--busy" aria-hidden="true"></span>
+                Active
+              </span>
+            </div>
+            <div class="param-grid">
+              <div class="param-row">
+                <span class="param-label">Battery</span>
+                <span class="param-value text-accent" id="batteryValue">80%</span>
+              </div>
+              <div class="param-row">
+                <span class="param-label">Signal</span>
+                <span class="param-value" id="signal">92%</span>
+              </div>
+              <div class="param-row">
+                <span class="param-label">Mode</span>
+                <span class="param-value" id="modeValue">Manual</span>
+              </div>
+              <div class="param-row">
+                <span class="param-label">Temp</span>
+                <span class="param-value" id="temp">47C</span>
+              </div>
+            </div>
+            <span id="battery" class="visually-hidden">80%</span>
+            <span id="mode" class="visually-hidden">Manual</span>
+          </section>
+
+          <section class="panel dashboard-panel">
+            <div class="panel__header">
+              <div>
+                <p class="panel__eyebrow">Quick Actions</p>
+                <h2 class="panel__title">Mission Controls</h2>
+              </div>
+            </div>
+            <div class="action-row">
+              <button class="button button--primary action-btn" data-action="start" type="button">
+                Start Mission
+              </button>
+              <button class="button action-btn" data-action="stop" type="button">
+                Stop
+              </button>
+              <button class="button action-btn" data-action="return" type="button">
+                Return
+              </button>
+              <button class="button button--danger action-btn" data-action="emergency" type="button">
+                Emergency
+              </button>
+            </div>
+          </section>
+
+          <section class="panel dashboard-panel">
+            <div class="panel__header">
+              <div>
+                <p class="panel__eyebrow">Alerts</p>
+                <h2 class="panel__title">Recent Events</h2>
+              </div>
+              <span class="badge">
+                <span class="status-dot status-dot--online" aria-hidden="true"></span>
+                Stable
+              </span>
+            </div>
+            <div class="feed-list">
+              <div class="feed-item">
+                <div class="feed-time">11:42</div>
+                <div class="feed-copy">System ready for manual operation.</div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-time">11:38</div>
+                <div class="feed-copy">Battery trend remains within the healthy threshold.</div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-time">11:34</div>
+                <div class="feed-copy">AI monitoring is active and reporting clean frame checks.</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.plugin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/page-init.js') }}"></script>
+  </body>
+</html>
