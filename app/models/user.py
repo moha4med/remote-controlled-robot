@@ -11,15 +11,38 @@ class User(db.Model):
         nullable=False
     )
     
+    first_name = db.Column(
+        db.String(100),
+        nullable=True
+    )
+    
+    last_name = db.Column(
+        db.String(100),
+        nullable=True
+    )
+
     email = db.Column(
         db.String(255),
         unique=True,
-        nullable=False
+        nullable=False,
+        index=True
     )
     
     password_hash = db.Column(
         db.String(255),
         nullable=False
+    )
+    
+    role = db.Column(
+        db.String(50),
+        nullable=False,
+        default="operator"
+    )
+    
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
     )
     
     created_at = db.Column(
