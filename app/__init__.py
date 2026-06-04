@@ -6,6 +6,7 @@ from flask_cors import CORS
 from app.extensions import db
 from app.extensions import jwt
 from app.extensions import bcrypt
+from app.extensions import socketio
 
 from app.routes.api.v1.auth import auth_bp
 from app.routes.api.v1.camera import camera_bp
@@ -29,6 +30,7 @@ def create_app():
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
+    socketio.init_app(app)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(camera_bp)
