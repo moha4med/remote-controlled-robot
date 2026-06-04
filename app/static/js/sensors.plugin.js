@@ -282,7 +282,7 @@
     }
 
     if (sensors.temp !== null) {
-      this.$values.temp.text(formatValue(sensors.temp, "°C"));
+      this.$values.temp.text(formatValue(sensors.temp, "\u00b0C"));
       this.pushValue("temp", sensors.temp);
     }
 
