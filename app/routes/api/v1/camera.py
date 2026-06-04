@@ -1,23 +1,27 @@
 # app/routes/video.py
 
 from flask import Blueprint, Response, render_template, send_file
-from app.services.stream_service import generate_stream
+from app.services.camera_service import generate_stream
 from app.sensors.camera import camera
 
-video_bp = Blueprint('video', __name__)
+camera_bp = Blueprint(
+    "camera",
+    __name__,
+    url_prefix="/api/v1/camera"
+)
 
-@video_bp.route('/')
+@camera_bp.route("/")
 def index():
     return render_template('control.html')
 
-@video_bp.route('/video_feed')
+@camera_bp.route("/video_feed")
 def video_feed():
     return Response(
         generate_stream(),
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
 
-@video_bp.route('/capture')
+@camera_bp.route("/capture")
 def capture():
     path = camera.capture_image()
 
