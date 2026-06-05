@@ -20,6 +20,7 @@
     <div
       class="app-shell items-stretch md:grid-cols-[minmax(0,64px)_minmax(0,1fr)]"
       data-control-surface
+      data-sensors-url="{{ url_for('sensors_api.environment') }}"
     >
       <nav
         class="sidebar fixed inset-x-0 top-0 z-50 hidden flex md:flex flex-col w-16 max-h-screen min-h-screen md:static md:z-auto md:max-h-none md:min-h-0"
@@ -167,7 +168,7 @@
                         <i data-feather="menu"></i>
                       </button>
 
-                      <span class="overlay-chip">NOVA-02</span>
+                      <span class="overlay-chip">RCR-001</span>
                     </div>
 
                     <div class="flex flex-col items-end gap-2">
@@ -190,7 +191,7 @@
                       title="Updated: --"
                     >
                       <i data-feather="thermometer"></i>
-                      <span id="topTemp">--°C</span>
+                      <span id="topTemp" aria-live="polite">--°C</span>
                       <span
                         id="topTempDot"
                         class="status-dot status-dot--inactive"
@@ -204,7 +205,7 @@
                       title="Updated: --"
                     >
                       <i data-feather="droplet"></i>
-                      <span id="topHumidity">--%</span>
+                      <span id="topHumidity" aria-live="polite">--%</span>
                       <span
                         id="topHumidityDot"
                         class="status-dot status-dot--inactive"

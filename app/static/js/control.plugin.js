@@ -4,7 +4,7 @@
  * Responsibilities:
  * - Bind directional commands with delegated events.
  * - Handle touch gestures for swipe/press interactions.
- * - Poll the mobile telemetry strip from `/api/sensors` and `/api/status`.
+ * - Poll the mobile telemetry strip from `/api/v1/sensors/` and `/api/status`.
  *
  * State is stored with `$.data()` for lightweight lifecycle management.
  */
@@ -13,14 +13,45 @@
 
   var DEFAULTS = {
     moveUrl: "/api/move",
-    sensorsUrl: "/api/sensors",
+    sensorsUrl: "/api/v1/sensors/",
     statusUrl: "/api/status",
     pollIntervalMs: 3000,
   };
 
+  function coerceNumber(value) {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+
+    var number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  function formatValue(value, suffix) {
+    var number = coerceNumber(value);
+
+    if (number === null) {
+      return "--" + suffix;
+    }
+
+    return number.toFixed(number % 1 === 0 ? 0 : 1) + suffix;
+  }
+
+  function normalizeSensorData(data) {
+    if (!data) {
+      return null;
+    }
+
+    return {
+      temp: coerceNumber(data.temperature !== undefined ? data.temperature : data.temp),
+      humidity: coerceNumber(data.humidity),
+    };
+  }
+
   function ControlSurface(element, options) {
     this.$root = $(element);
     this.options = $.extend({}, DEFAULTS, options);
+    this.options.sensorsUrl = this.$root.data("sensorsUrl") || this.options.sensorsUrl;
     this.$camera = this.$root.find("#cameraZone");
     this.$gesture = this.$root.find("#gestureZone");
     this.$buttons = this.$root.find("[data-command]");
