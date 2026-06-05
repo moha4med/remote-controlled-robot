@@ -11,6 +11,9 @@ from app.extensions import socketio
 from app.routes.api.v1.auth import auth_bp
 from app.routes.api.v1.camera import camera_bp
 from app.routes.api.v1.sensors import sensors_bp
+from app.routes.control import control_bp
+from app.routes.dashboard import dashboard_bp
+from app.routes.sensors import sensors_page_bp
 # from app.routes.api.v1.robot import robot_bp
 
 def create_app():
@@ -35,6 +38,9 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(camera_bp)
     app.register_blueprint(sensors_bp)
+    app.register_blueprint(control_bp)
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(sensors_page_bp)
     # app.register_blueprint(robot_bp)
     
     with app.app_context():
