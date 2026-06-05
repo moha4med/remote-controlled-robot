@@ -31,7 +31,7 @@
           <li>
             <a
               class="nav-item"
-              href="{{ url_for('video.dashboard') }}"
+              href="{{ url_for('camera.index') }}"
               aria-label="Dashboard"
             >
               <i data-feather="activity"></i>
@@ -40,7 +40,7 @@
           <li>
             <a
               class="nav-item active"
-              href="{{ url_for('video.control') }}"
+              href="{{ url_for('camera.index') }}"
               aria-label="Control"
             >
               <i data-feather="sliders"></i>
@@ -49,7 +49,7 @@
           <li>
             <a
               class="nav-item"
-              href="{{ url_for('video.sensors') }}"
+              href="{{ url_for('camera.index') }}"
               aria-label="Sensors"
             >
               <i data-feather="bar-chart-2"></i>
@@ -140,7 +140,7 @@
                   <!-- Video -->
                   <img
                     id="liveStream"
-                    src="{{ url_for('video.video_feed') }}"
+                    src="{{ url_for('camera.video_feed') }}"
                     alt="Live camera stream"
                     class="absolute inset-0 w-full h-full object-cover"
                   />
