@@ -8,9 +8,11 @@ from app.models.user import User
 
 auth_bp = Blueprint('auth', __name__, url_prefix="/api/v1/auth")
 
-@auth_bp.route('/login', methods=['POST'])
+@auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.json
+    
+    print("Login attempt:", data)  # Debugging statement
     
     username = data.get("username")
     user = User.query.filter_by(username=username).first()
@@ -30,7 +32,13 @@ def login():
         "access_token": token,
         "user": {
             "id": user.id,
-            "username": user.username
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "role": user.role,
+            "is_active": user.is_active
+            
         }
     })
 
