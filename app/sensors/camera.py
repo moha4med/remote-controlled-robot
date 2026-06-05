@@ -25,7 +25,7 @@ class Camera:
         self.lock = threading.Lock()
 
         config = self.picam2.create_video_configuration(
-            main={"size": (1280, 720), "format": "RGB888"}
+            main={"size": (640, 480), "format": "RGB888"}
         )
 
         self.picam2.configure(config)
@@ -34,8 +34,9 @@ class Camera:
         time.sleep(1)
 
     def get_frame(self):
-        frame = self.picam2.capture_array()
-        return frame
+        with self.lock:
+            frame = self.picam2.capture_array()
+            return frame
     
     def capture_image(self):
         frame = self.get_frame()

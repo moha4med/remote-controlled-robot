@@ -1,4 +1,4 @@
-# app/routes/video.py
+# app/routes/camera.py
 
 from flask import Blueprint, Response, render_template, send_file
 from app.services.camera_service import generate_stream
