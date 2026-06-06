@@ -2,9 +2,10 @@
  * Robot control surface plugin.
  *
  * Responsibilities:
- * - Bind directional commands with delegated events.
+ * - Bind directional commands with delegated events via `/api/v1/move`.
  * - Handle touch gestures for swipe/press interactions.
- * - Poll the mobile telemetry strip from `/api/v1/sensors/` and `/api/status`.
+ * - Poll telemetry and update overlay strip, battery bars, side panel, compass.
+ * - Animate numeric value transitions.
  *
  * State is stored with `$.data()` for lightweight lifecycle management.
  */
@@ -12,41 +13,74 @@
   "use strict";
 
   var DEFAULTS = {
-    moveUrl: "/api/move",
+    moveUrl: "/api/v1/move",
     sensorsUrl: "/api/v1/sensors/",
-    statusUrl: "/api/status",
+    statusUrl: "/api/v1/status",
     pollIntervalMs: 3000,
   };
 
-  function coerceNumber(value) {
-    if (value === null || value === undefined || value === "") {
-      return null;
-    }
+  /* ── Helpers ─────────────────────────────────────── */
 
-    var number = Number(value);
-    return Number.isFinite(number) ? number : null;
+  function coerceNumber(value) {
+    if (value === null || value === undefined || value === "") return null;
+    var n = Number(value);
+    return Number.isFinite(n) ? n : null;
   }
 
-  function formatValue(value, suffix) {
-    var number = coerceNumber(value);
-
-    if (number === null) {
-      return "--" + suffix;
+  function animateValue($el, newVal, suffix, duration) {
+    var current = parseFloat($el.data("value")) || 0;
+    var target = coerceNumber(newVal);
+    if (target === null) {
+      $el.text("--" + (suffix || ""));
+      return;
     }
+    suffix = suffix || "";
+    duration = duration || 300;
+    $({ val: current }).animate({ val: target }, {
+      duration: duration,
+      easing: "swing",
+      step: function () {
+        $el.text(Number(this.val).toFixed(0) + suffix);
+      },
+      complete: function () {
+        $el.text(target + suffix);
+        $el.data("value", target);
+      },
+    });
+  }
 
-    return number.toFixed(number % 1 === 0 ? 0 : 1) + suffix;
+  function updateBatteryBars($container, percent) {
+    if (!$container || !$container.length) return;
+    var $bars = $container.find(".battery-bar");
+    if (!$bars.length) return;
+    var total = $bars.length;
+    var active = Math.round((percent / 100) * total);
+    $bars.each(function (i) {
+      $(this).toggleClass("is-active", i < active);
+    });
+  }
+
+  function setHeading(degrees) {
+    var $needle = $(".compass-needle");
+    if (!$needle.length) return;
+    var deg = coerceNumber(degrees) || 0;
+    $needle.css({
+      transform: "translate(-50%, -100%) rotate(" + deg + "deg)",
+      transition: "transform 300ms ease",
+    });
+    var $badge = $("#heading-badge");
+    if ($badge.length) $badge.text(Math.round(deg) + "\u00b0");
   }
 
   function normalizeSensorData(data) {
-    if (!data) {
-      return null;
-    }
-
+    if (!data) return null;
     return {
       temp: coerceNumber(data.temperature !== undefined ? data.temperature : data.temp),
       humidity: coerceNumber(data.humidity),
     };
   }
+
+  /* ── Plugin ──────────────────────────────────────── */
 
   function ControlSurface(element, options) {
     this.$root = $(element);
@@ -55,11 +89,22 @@
     this.$camera = this.$root.find("#cameraZone");
     this.$gesture = this.$root.find("#gestureZone");
     this.$buttons = this.$root.find("[data-command]");
+
+    // Telemetry strip overlay
     this.$temp = this.$root.find("#topTemp");
     this.$humidity = this.$root.find("#topHumidity");
     this.$battery = this.$root.find("#topBattery");
     this.$signal = this.$root.find("#topSignal");
     this.$time = this.$root.find("#topTime");
+
+    // Side panel telemetry
+    this.$speed = this.$root.find("#speed-value");
+    this.$altitude = this.$root.find("#altitude-value");
+    this.$batteryValue = this.$root.find("#battery-value");
+    this.$batteryBars = this.$root.find("#battery-bars");
+    this.$signalValue = this.$root.find("#signal-value");
+
+    // Status dots
     this.$dots = {
       temp: this.$root.find("#topTempDot"),
       humidity: this.$root.find("#topHumidityDot"),
@@ -103,6 +148,8 @@
     return this;
   };
 
+  /* ── Touch / Gesture ─────────────────────────────── */
+
   ControlSurface.prototype.onTouchStart = function (event) {
     var touch = event.originalEvent.touches[0];
     var self = this;
@@ -138,10 +185,13 @@
     this.$gesture.removeClass("is-active");
 
     if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
-      this.sendCommand(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "backward" : "forward"));
+      this.sendCommand(
+        Math.abs(dx) > Math.abs(dy)
+          ? (dx > 0 ? "right" : "left")
+          : (dy > 0 ? "backward" : "forward")
+      );
       return;
     }
-
     if (!this.moved && duration < 250) {
       this.sendCommand("stop");
     }
@@ -160,58 +210,75 @@
       method: "POST",
       data: { direction: command },
     });
-    return this;
   };
+
+  /* ── Telemetry ───────────────────────────────────── */
 
   ControlSurface.prototype.updateTelemetry = function (statusData, sensorData) {
     if (sensorData) {
       if (sensorData.temperature !== undefined) {
-        this.$temp.text(sensorData.temperature + "°C");
+        animateValue(this.$temp, sensorData.temperature, "\u00b0C");
         this.markFresh("temp");
       }
       if (sensorData.humidity !== undefined) {
-        this.$humidity.text(sensorData.humidity + "%");
+        animateValue(this.$humidity, sensorData.humidity, "%");
         this.markFresh("humidity");
       }
     }
 
     if (statusData) {
       if (statusData.battery !== undefined) {
-        this.$battery.text(statusData.battery + "%");
+        animateValue(this.$battery, statusData.battery, "%");
+        animateValue(this.$batteryValue, statusData.battery, "%");
+        updateBatteryBars(this.$batteryBars, statusData.battery);
         this.markFresh("battery");
       }
       if (statusData.signal !== undefined) {
-        this.$signal.text(statusData.signal + "%");
+        animateValue(this.$signal, statusData.signal, "%");
+        animateValue(this.$signalValue, statusData.signal, "%");
         this.markFresh("signal");
+      }
+      if (statusData.speed !== undefined) {
+        animateValue(this.$speed, statusData.speed, " km/h");
+      }
+      if (statusData.altitude !== undefined) {
+        animateValue(this.$altitude, statusData.altitude, " m");
+      }
+      if (statusData.heading !== undefined) {
+        setHeading(statusData.heading);
       }
     }
 
     this.$time.text(new Date().toLocaleTimeString());
-    return this;
   };
 
   ControlSurface.prototype.markFresh = function (key) {
     var $metric = this.$root.find("#metric" + key.charAt(0).toUpperCase() + key.slice(1));
     if ($metric.length) {
-      $metric.removeClass("is-stale");
-      $metric.attr("title", "Updated: just now");
+      $metric.removeClass("is-stale").attr("title", "Updated: just now");
     }
-    this.$dots[key].attr("class", "status-dot status-dot--busy");
+    if (this.$dots[key] && this.$dots[key].length) {
+      this.$dots[key].attr("class", "status-dot status-dot--busy");
+    }
     this.lastUpdated[key] = Date.now();
   };
 
   ControlSurface.prototype.markStale = function (key) {
     var $metric = this.$root.find("#metric" + key.charAt(0).toUpperCase() + key.slice(1));
     if ($metric.length) {
-      $metric.addClass("is-stale");
-      $metric.attr("title", "Stale data");
+      $metric.addClass("is-stale").attr("title", "Stale data");
     }
-    this.$dots[key].attr("class", "status-dot");
+    if (this.$dots[key] && this.$dots[key].length) {
+      this.$dots[key].attr("class", "status-dot");
+    }
   };
 
   ControlSurface.prototype.pollTelemetry = function () {
     var self = this;
-    $.when($.getJSON(this.options.sensorsUrl), $.getJSON(this.options.statusUrl))
+    $.when(
+      $.getJSON(this.options.sensorsUrl),
+      $.getJSON(this.options.statusUrl)
+    )
       .done(function (sensorsResponse, statusResponse) {
         var sensors = sensorsResponse[0] || sensorsResponse;
         var status = statusResponse[0] || statusResponse;
@@ -219,26 +286,16 @@
       })
       .fail(function () {
         $.getJSON(self.options.sensorsUrl)
-          .done(function (sensors) {
-            self.updateTelemetry(null, sensors);
-          })
+          .done(function (sensors) { self.updateTelemetry(null, sensors); })
           .fail(function () {
-            $.each(["temp", "humidity"], function (_, key) {
-              self.markStale(key);
-            });
+            $.each(["temp", "humidity"], function (_, k) { self.markStale(k); });
           });
-
         $.getJSON(self.options.statusUrl)
-          .done(function (status) {
-            self.updateTelemetry(status, null);
-          })
+          .done(function (status) { self.updateTelemetry(status, null); })
           .fail(function () {
-            $.each(["battery", "signal"], function (_, key) {
-              self.markStale(key);
-            });
+            $.each(["battery", "signal"], function (_, k) { self.markStale(k); });
           });
       });
-    return this;
   };
 
   ControlSurface.prototype.destroy = function () {
@@ -250,22 +307,18 @@
     this.$camera.add(this.$gesture).off(".robotControlSurface");
     this.$root.off(".robotControlSurface");
     this.$root.removeData("robotControlSurface");
-    return this;
   };
 
   $.fn.robotControlSurface = function (methodOrOptions) {
     var args = Array.prototype.slice.call(arguments, 1);
-
     return this.each(function () {
       var instance = $.data(this, "robotControlSurface");
-
       if (!instance) {
         instance = new ControlSurface(this, methodOrOptions);
         $.data(this, "robotControlSurface", instance);
         instance.init();
         return;
       }
-
       if (typeof methodOrOptions === "string" && typeof instance[methodOrOptions] === "function") {
         instance[methodOrOptions].apply(instance, args);
       }
