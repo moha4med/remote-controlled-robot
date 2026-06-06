@@ -1,10 +1,10 @@
 # app/routes/api/v1/status.py
-# Combined status, events, and move endpoints for jQuery frontend
+# Combined status and events endpoints
 
 from flask import Blueprint, jsonify, request
+from app.extensions import limiter
 from app.services.robot_service import RobotService
 from app.models.sensor_log import SensorLog
-from datetime import datetime, timezone
 import time
 
 status_bp = Blueprint("status", __name__, url_prefix="/api/v1")
@@ -12,6 +12,7 @@ robot = RobotService()
 
 
 @status_bp.route("/status", methods=["GET"])
+@limiter.limit("60/minute")
 def get_status():
     """Return a combined status snapshot from the latest DB record + robot state."""
     latest = (
@@ -41,12 +42,12 @@ def get_status():
 
 
 @status_bp.route("/events", methods=["POST"])
+@limiter.limit("20/minute")
 def post_event():
     """Accept quick-action events from the dashboard."""
     action = request.form.get("action", "")
     print(f"[EVENT] Action received: {action}")
 
-    # Map actions to robot commands
     action_map = {
         "start": "forward",
         "stop": "stop",
@@ -60,26 +61,3 @@ def post_event():
         robot.stop()
 
     return jsonify({"status": "ok", "action": action, "robot_state": robot.state})
-
-
-@status_bp.route("/move", methods=["POST"])
-def move_robot():
-    """Move endpoint used by control.plugin.js (form-encoded POST)."""
-    direction = request.form.get("direction", "").lower()
-
-    if direction == "forward":
-        robot.forward()
-    elif direction == "backward":
-        robot.backward()
-    elif direction == "left":
-        robot.left()
-    elif direction == "right":
-        robot.right()
-    else:
-        robot.stop()
-
-    return jsonify({
-        "status": "ok",
-        "direction": direction,
-        "state": robot.state,
-    })

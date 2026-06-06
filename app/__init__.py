@@ -3,10 +3,7 @@
 from flask import Flask
 from flask_cors import CORS
 
-from app.extensions import db
-from app.extensions import jwt
-from app.extensions import bcrypt
-from app.extensions import socketio
+from app.extensions import db, jwt, bcrypt, socketio, limiter
 
 from app.routes.api.v1.auth import auth_bp
 from app.routes.api.v1.camera import camera_bp
@@ -15,6 +12,8 @@ from app.routes.api.v1.robot import robot_bp
 from app.routes.api.v1.status import status_bp
 from app.routes.api.v1.logs import logs_bp
 from app.routes.api.v1.captures import captures_bp
+from app.routes.api.v1.users import users_bp
+from app.routes.api.v1.settings import settings_bp
 from app.routes.control import control_bp
 from app.routes.dashboard import dashboard_bp
 from app.routes.sensors import sensors_page_bp
@@ -38,17 +37,23 @@ def create_app():
     jwt.init_app(app)
     bcrypt.init_app(app)
     socketio.init_app(app)
+    limiter.init_app(app)
 
+    # API v1 routes
     app.register_blueprint(auth_bp)
     app.register_blueprint(camera_bp)
     app.register_blueprint(sensors_bp)
-    app.register_blueprint(control_bp)
-    app.register_blueprint(dashboard_bp)
-    app.register_blueprint(sensors_page_bp)
     app.register_blueprint(robot_bp)
     app.register_blueprint(status_bp)
     app.register_blueprint(logs_bp)
     app.register_blueprint(captures_bp)
+    app.register_blueprint(users_bp)
+    app.register_blueprint(settings_bp)
+
+    # HTML frontend routes
+    app.register_blueprint(control_bp)
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(sensors_page_bp)
 
     with app.app_context():
         db.create_all()
