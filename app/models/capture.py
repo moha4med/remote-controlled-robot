@@ -37,7 +37,7 @@ class Capture(db.Model):
         default=lambda: datetime.now(timezone.utc)
     )
 
-    def to_dict(self):
+    def to_dict(self, base_url: str = ""):
         return {
             "id": self.id,
             "filename": self.filename,
@@ -47,6 +47,6 @@ class Capture(db.Model):
             "width": self.width,
             "height": self.height,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "url": f"/api/v1/captures/file/{self.filename}",
-            "thumbnail_url": f"/api/v1/captures/thumb/{self.filename}" if self.thumbnail_path else None,
+            "url": f"{base_url}/api/v1/captures/file/{self.filename}",
+            "thumbnail_url": f"{base_url}/api/v1/captures/thumb/{self.filename}" if self.thumbnail_path else None,
         }

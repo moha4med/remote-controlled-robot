@@ -2,7 +2,7 @@
 # API for camera capture listing, trigger, and file serving
 
 import os
-from flask import Blueprint, jsonify, send_file
+from flask import Blueprint, jsonify, send_file, request
 from app.sensors.camera import camera, BASE_DIR
 from app.extensions import db
 from app.models.capture import Capture
@@ -10,6 +10,13 @@ from app.models.capture import Capture
 captures_bp = Blueprint("captures", __name__, url_prefix="/api/v1/captures")
 
 CAPTURES_DIR = os.path.join(BASE_DIR, "app", "static", "captures")
+
+
+def _get_base_url():
+    """Build the base URL from the request, respecting reverse proxies."""
+    scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
+    host = request.headers.get("X-Forwarded-Host", request.host)
+    return f"{scheme}://{host}"
 
 
 @captures_bp.route("/", methods=["GET"])
@@ -21,7 +28,8 @@ def list_captures():
         .limit(50)
         .all()
     )
-    return jsonify([c.to_dict() for c in captures])
+    base_url = _get_base_url()
+    return jsonify([c.to_dict(base_url=base_url) for c in captures])
 
 
 @captures_bp.route("/", methods=["POST"])
@@ -40,10 +48,11 @@ def trigger_capture():
     db.session.add(capture)
     db.session.commit()
 
-    return jsonify(capture.to_dict()), 201
+    base_url = _get_base_url()
+    return jsonify(capture.to_dict(base_url=base_url)), 201
 
 
-@captures_bp.route("/file/<filename>")
+@captures_bp.route("/file/<path:filename>")
 def serve_file(filename):
     """Serve a full-resolution capture image."""
     safe_path = os.path.join(CAPTURES_DIR, filename)
@@ -55,7 +64,7 @@ def serve_file(filename):
     return send_file(safe_path, mimetype="image/jpeg")
 
 
-@captures_bp.route("/thumb/<filename>")
+@captures_bp.route("/thumb/<path:filename>")
 def serve_thumbnail(filename):
     """Serve a thumbnail image."""
     thumb_dir = os.path.join(CAPTURES_DIR, "thumbs")
@@ -74,4 +83,5 @@ def latest_capture():
     capture = Capture.query.order_by(Capture.created_at.desc()).first()
     if not capture:
         return jsonify({"message": "No captures yet"}), 404
-    return jsonify(capture.to_dict())
+    base_url = _get_base_url()
+    return jsonify(capture.to_dict(base_url=base_url))
