@@ -97,9 +97,10 @@
         </header>
 
         <div class="panel-grid dashboard-grid">
-          <section class="panel panel--feed dashboard-panel">
-            <div class="camera-stage">
+          <section class="panel panel--feed dashboard-panel" id="capturePanel">
+            <div class="camera-stage" id="cameraPreviewStage">
               <img
+                id="cameraPreviewImg"
                 src="{{ url_for('static', filename='images/camera_fade_frame_save_011.png') }}"
                 alt="Camera preview from the robot feed"
                 class="camera-stage__image"
@@ -119,13 +120,13 @@
                 <span class="overlay-chip">Frame Sync 12 ms</span>
               </div>
               <div class="camera-overlay camera-overlay--bottom">
-                <span class="overlay-chip overlay-chip--danger">
-                  <span class="status-dot status-dot--live" aria-hidden="true"></span>
-                  REC 00:12:48
-                </span>
-                <span class="overlay-chip overlay-chip--success">
-                  <i data-feather="shield"></i>
-                  Stream OK
+                <button class="overlay-chip overlay-chip--accent" id="btnCapture" type="button" aria-label="Capture image">
+                  <i data-feather="camera"></i>
+                  Capture
+                </button>
+                <span class="overlay-chip overlay-chip--success" id="captureStatus">
+                  <i data-feather="check-circle"></i>
+                  Ready
                 </span>
               </div>
             </div>
@@ -137,6 +138,10 @@
               <div class="status-bar__group">
                 <span class="status-label">Last update</span>
                 <span id="dashboardTimestamp">12:42:18</span>
+              </div>
+              <div class="status-bar__group">
+                <span class="status-label">Captures</span>
+                <span id="captureCount" class="font-mono text-accent">0</span>
               </div>
             </div>
           </section>
@@ -197,29 +202,21 @@
             </div>
           </section>
 
-          <section class="panel dashboard-panel">
+          <section class="panel dashboard-panel" id="galleryPanel">
             <div class="panel__header">
               <div>
-                <p class="panel__eyebrow">Alerts</p>
-                <h2 class="panel__title">Recent Events</h2>
+                <p class="panel__eyebrow">Gallery</p>
+                <h2 class="panel__title">Captured Images</h2>
               </div>
-              <span class="badge">
-                <span class="status-dot status-dot--online" aria-hidden="true"></span>
-                Stable
+              <span class="badge" id="galleryCount">
+                <i data-feather="image"></i>
+                <span id="galleryCountText">0</span>
               </span>
             </div>
-            <div class="feed-list">
-              <div class="feed-item">
-                <div class="feed-time">11:42</div>
-                <div class="feed-copy">System ready for manual operation.</div>
-              </div>
-              <div class="feed-item">
-                <div class="feed-time">11:38</div>
-                <div class="feed-copy">Battery trend remains within the healthy threshold.</div>
-              </div>
-              <div class="feed-item">
-                <div class="feed-time">11:34</div>
-                <div class="feed-copy">AI monitoring is active and reporting clean frame checks.</div>
+            <div class="capture-grid" id="captureGallery">
+              <!-- Captures loaded dynamically by dashboard.plugin.js -->
+              <div class="capture-grid__empty" id="galleryEmpty">
+                <p class="inline-caption">No captures yet. Click <strong>Capture</strong> above to take one.</p>
               </div>
             </div>
           </section>
