@@ -1,8 +1,12 @@
+# app/services/sensor_stream.py
+# Sensor data acquisition, persistence, and Socket.IO broadcasting.
+
 import time
 from app.extensions import socketio, db
 from app.sensors.usb_temp_humidity import USBTempHumiditySensor
 from app.models.sensor_log import SensorLog
 from app.services.robot_service import RobotService
+from app.services.system_service import get_system_metrics
 
 
 class SensorStreamManager:
@@ -12,6 +16,8 @@ class SensorStreamManager:
         self._sensor = None
         self._init_sensor()
         self.robot = RobotService()
+        self._system_interval = 5.0
+        self._last_system_emit = 0
 
     def _init_sensor(self):
         try:
@@ -69,6 +75,7 @@ class SensorStreamManager:
                 signal_strength=data.get("signal"),
                 robot_state=data.get("robot_state"),
             )
+            
             db.session.add(log)
             db.session.commit()
         except Exception:
@@ -87,12 +94,18 @@ class SensorStreamManager:
             "timestamp": data["timestamp"],
         })
 
+    def broadcast_system_metrics(self):
+        """Read system metrics and emit via SocketIO."""
+        metrics = get_system_metrics()
+        socketio.emit("system:update", metrics)
+
 
 manager = SensorStreamManager()
 
 
 def sensor_loop(app):
     """Background loop: read sensors, persist, emit every 2.5s.
+    System metrics emitted every 5s.
     
     Must be called with the Flask app so DB operations work in the 
     background thread context.
@@ -101,6 +114,10 @@ def sensor_loop(app):
         while True:
             try:
                 manager.read_and_broadcast()
+                now = time.time()
+                if now - manager._last_system_emit >= manager._system_interval:
+                    manager.broadcast_system_metrics()
+                    manager._last_system_emit = now
             except Exception as e:
                 socketio.emit("sensor:error", {"error": str(e)})
             socketio.sleep(2.5)
