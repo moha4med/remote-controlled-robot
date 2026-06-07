@@ -1,5 +1,7 @@
 # app/routes/api/v1/captures.py
 # API for camera capture listing, trigger, delete, and file serving
+# List/file/latest endpoints: auth commented out (jQuery frontend)
+# Trigger/delete endpoints: auth required (Next.js frontend)
 
 import os
 from flask import Blueprint, jsonify, send_file, request, make_response
@@ -31,6 +33,7 @@ def _add_cors(response):
 
 @captures_bp.route("/", methods=["GET"])
 @limiter.limit("30/minute")
+# @jwt_required_role("operator")  # uncomment to enable auth
 def list_captures():
     """Return captures with pagination, search, and date filtering."""
     page = request.args.get("page", 1, type=int)
@@ -84,10 +87,10 @@ def list_captures():
 
 
 @captures_bp.route("/", methods=["POST"])
-# @jwt_required_role("operator")
+@jwt_required_role("operator")
 @limiter.limit("10/minute")
 def trigger_capture():
-    """Capture an image, persist metadata to DB, return the record."""
+    """Capture an image, persist metadata to DB, return the record. Auth required."""
     result = camera.capture_image()
 
     capture = Capture(
@@ -107,10 +110,10 @@ def trigger_capture():
 
 
 @captures_bp.route("/<int:capture_id>", methods=["DELETE"])
-# @jwt_required_role("operator")
+@jwt_required_role("operator")
 @limiter.limit("10/minute")
 def delete_capture(capture_id):
-    """Delete a capture record and its associated files."""
+    """Delete a capture record and its associated files. Auth required."""
     capture = Capture.query.get_or_404(capture_id)
 
     try:
@@ -134,6 +137,7 @@ def delete_capture(capture_id):
 
 @captures_bp.route("/file/<path:filename>")
 @limiter.limit("60/minute")
+# @jwt_required_role("operator")  # uncomment to enable auth
 def serve_file(filename):
     """Serve a full-resolution capture image with CORS headers."""
     safe_path = os.path.join(CAPTURES_DIR, filename)
@@ -149,6 +153,7 @@ def serve_file(filename):
 
 @captures_bp.route("/thumb/<path:filename>")
 @limiter.limit("60/minute")
+# @jwt_required_role("operator")  # uncomment to enable auth
 def serve_thumbnail(filename):
     """Serve a thumbnail image with CORS headers."""
     thumb_dir = os.path.join(CAPTURES_DIR, "thumbs")
@@ -166,8 +171,9 @@ def serve_thumbnail(filename):
 
 @captures_bp.route("/latest", methods=["GET"])
 @limiter.limit("30/minute")
+# @jwt_required_role("operator")  # uncomment to enable auth
 def latest_capture():
-    """Return the most recent capture record (no file download)."""
+    """Return the most recent capture record."""
     capture = Capture.query.order_by(Capture.created_at.desc()).first()
     if not capture:
         response = make_response(jsonify({"message": "No captures yet"}), 404)
