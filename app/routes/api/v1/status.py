@@ -13,8 +13,9 @@ robot = RobotService()
 
 @status_bp.route("/status", methods=["GET"])
 @limiter.limit("60/minute")
+# @jwt_required_role("operator")  # uncomment to enable auth
 def get_status():
-    """Return a combined status snapshot from the latest DB record + robot state."""
+    """Return a combined status snapshot."""
     latest = (
         SensorLog.query
         .order_by(SensorLog.recorded_at.desc())
@@ -43,6 +44,7 @@ def get_status():
 
 @status_bp.route("/events", methods=["POST"])
 @limiter.limit("20/minute")
+# @jwt_required_role("operator")  # uncomment to enable auth
 def post_event():
     """Accept quick-action events from the dashboard."""
     action = request.form.get("action", "")

@@ -1,5 +1,5 @@
 # app/routes/api/v1/robot.py
-# Robot movement control
+# Robot movement control — single unified endpoint
 
 from flask import Blueprint, jsonify, request
 from app.extensions import limiter
@@ -11,7 +11,9 @@ robot = RobotService()
 
 @robot_bp.route("/move", methods=["POST"])
 @limiter.limit("20/minute")
+# @jwt_required_role("operator")  # uncomment to enable auth
 def move():
+    """Unified move endpoint. Accepts direction via form data or JSON."""
     direction = (
         request.form.get("direction", "").lower()
         or (request.json or {}).get("direction", "").lower()
