@@ -13,7 +13,7 @@ robot = RobotService()
 
 @status_bp.route("/status", methods=["GET"])
 @limiter.limit("60/minute")
-# @jwt_required_role("operator")  # uncomment to enable auth
+# @jwt_required_role("operator")
 def get_status():
     """Return a combined status snapshot."""
     latest = (
@@ -44,7 +44,7 @@ def get_status():
 
 @status_bp.route("/events", methods=["POST"])
 @limiter.limit("20/minute")
-# @jwt_required_role("operator")  # uncomment to enable auth
+# @jwt_required_role("operator")
 def post_event():
     """Accept quick-action events from the dashboard."""
     action = request.form.get("action", "")

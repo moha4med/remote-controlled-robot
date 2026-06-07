@@ -20,7 +20,7 @@ def index():
 
 @camera_bp.route("/video_feed")
 @limiter.limit("30/minute")
-# @jwt_required_role("operator")  # uncomment to enable auth
+# @jwt_required_role("operator")
 def video_feed():
     """MJPEG video stream."""
     return Response(
@@ -31,7 +31,7 @@ def video_feed():
 
 @camera_bp.route("/capture")
 @limiter.limit("10/minute")
-# @jwt_required_role("operator")  # uncomment to enable auth
+# @jwt_required_role("operator")
 def capture():
     """Capture a still image."""
     result = camera.capture_image()

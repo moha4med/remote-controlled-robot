@@ -10,7 +10,7 @@ logs_bp = Blueprint("logs", __name__, url_prefix="/api/v1/logs")
 
 @logs_bp.route("/sensors", methods=["GET"])
 @limiter.limit("30/minute")
-# @jwt_required_role("operator")  # uncomment to enable auth
+# @jwt_required_role("operator")
 def get_sensor_history():
     """Return the last 120 sensor log entries."""
     logs = (

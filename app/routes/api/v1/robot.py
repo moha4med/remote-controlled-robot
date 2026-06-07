@@ -11,7 +11,7 @@ robot = RobotService()
 
 @robot_bp.route("/move", methods=["POST"])
 @limiter.limit("20/minute")
-# @jwt_required_role("operator")  # uncomment to enable auth
+# @jwt_required_role("operator")
 def move():
     """Unified move endpoint. Accepts direction via form data or JSON."""
     direction = (

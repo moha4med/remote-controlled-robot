@@ -9,7 +9,7 @@ sensor = USBTempHumiditySensor("/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0
 
 @sensors_bp.route("/", methods=["GET"])
 @limiter.limit("60/minute")
-# @jwt_required_role("operator")  # uncomment to enable auth
+# @jwt_required_role("operator")
 def environment():
     """Return current environment sensor readings."""
     data = sensor.read()
