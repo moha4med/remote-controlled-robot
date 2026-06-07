@@ -2,7 +2,7 @@
  * Robot sensors dashboard plugin.
  *
  * Responsibilities:
- * - Load historical sensor data from `/api/v1/logs/sensors` on init.
+ * - Load historical sensor data from `/api/v1/history/` on init.
  * - Render live temperature and humidity charts with uPlot.
  * - Prefer Socket.IO updates when available.
  * - Fall back to polling `/api/v1/sensors/`.
@@ -18,7 +18,7 @@
 
   var DEFAULTS = {
     sensorsUrl: "/api/v1/sensors/",
-    logsUrl: "/api/v1/logs/sensors",
+    logsUrl: "/api/v1/history/",
     pollIntervalMs: 2500,
     points: 48,
     socketEnabled: true,
@@ -88,6 +88,15 @@
       humidity: this.$root.find("#humidityValue, #humidityValueCard"),
     };
     this.$sync = this.$root.find("#sensorSync");
+
+    // System metrics elements
+    this.$sysCpu = this.$root.find("#sysCpuSensors");
+    this.$sysMem = this.$root.find("#sysMemSensors");
+    this.$sysDisk = this.$root.find("#sysDiskSensors");
+    this.$sysCpuTemp = this.$root.find("#sysCpuTempSensors");
+    this.$sysUptime = this.$root.find("#sysUptimeSensors");
+    this.$sysStatus = this.$root.find("#sysStatusBadge");
+
     this.pollTimer = null;
     this.socketFallbackTimer = null;
     this.socket = null;
@@ -231,6 +240,12 @@
       self.usingSocket = true;
       self.stopPolling();
       self.clearSocketFallback();
+      if (self.$sysStatus.length) {
+        self.$sysStatus
+          .html('<span class="d-inline-block rounded-circle bg-success me-1" style="width:6px;height:6px"></span> Live')
+          .removeClass("bg-danger bg-warning")
+          .addClass("bg-success bg-opacity-25 text-success border border-success border-opacity-25");
+      }
     });
 
     this.socket.on(this.options.socketEvent, function (data) {
@@ -245,6 +260,17 @@
     this.socket.on("disconnect", function () {
       self.usingSocket = false;
       self.startPolling();
+      if (self.$sysStatus.length) {
+        self.$sysStatus
+          .html('<span class="d-inline-block rounded-circle bg-danger me-1" style="width:6px;height:6px"></span> Disconnected')
+          .removeClass("bg-success bg-warning")
+          .addClass("bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25");
+      }
+    });
+
+    // System metrics via SocketIO
+    this.socket.on("system:update", function (data) {
+      self.updateSystemMetrics(data);
     });
 
     this.socketFallbackTimer = window.setTimeout(function () {
@@ -293,6 +319,37 @@
     }
     if (this.$sync.length && (sensors.temp !== null || sensors.humidity !== null)) {
       this.$sync.text(new Date().toLocaleTimeString());
+    }
+    return this;
+  };
+
+  SensorDashboard.prototype.updateSystemMetrics = function (data) {
+    if (!data) return this;
+
+    if (data.cpu_usage !== undefined && this.$sysCpu.length) {
+      this.$sysCpu.text(Number(data.cpu_usage).toFixed(0) + "%");
+    }
+    if (data.memory_usage !== undefined && this.$sysMem.length) {
+      this.$sysMem.text(Number(data.memory_usage).toFixed(0) + "%");
+    }
+    if (data.disk_usage !== undefined && this.$sysDisk.length) {
+      this.$sysDisk.text(Number(data.disk_usage).toFixed(0) + "%");
+    }
+    if (data.cpu_temperature !== undefined && this.$sysCpuTemp.length) {
+      this.$sysCpuTemp.text(data.cpu_temperature + "\u00b0C");
+    }
+    if (data.uptime !== undefined && this.$sysUptime.length) {
+      var s = data.uptime;
+      var d = Math.floor(s / 86400);
+      var h = Math.floor((s % 86400) / 3600);
+      var m = Math.floor((s % 3600) / 60);
+      this.$sysUptime.text(d > 0 ? d + "d " + h + "h " + m + "m" : h > 0 ? h + "h " + m + "m" : m + "m");
+    }
+    if (this.$sysStatus.length) {
+      this.$sysStatus
+        .html('<span class="d-inline-block rounded-circle bg-success me-1" style="width:6px;height:6px"></span> Live')
+        .removeClass("bg-danger bg-warning")
+        .addClass("bg-success bg-opacity-25 text-success border border-success border-opacity-25");
     }
     return this;
   };

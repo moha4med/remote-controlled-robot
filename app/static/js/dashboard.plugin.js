@@ -3,6 +3,7 @@
  *
  * Responsibilities:
  * - Poll `/api/v1/status` every 2s for live telemetry.
+ * - Receive system metrics via SocketIO `system:update` events.
  * - Animate numeric value transitions.
  * - Handle image capture via `/api/v1/captures/`.
  * - Display capture gallery with thumbnails and full-size preview.
@@ -55,6 +56,16 @@
     return d.toLocaleTimeString();
   }
 
+  function formatUptime(seconds) {
+    if (!seconds || seconds < 0) return "--";
+    var d = Math.floor(seconds / 86400);
+    var h = Math.floor((seconds % 86400) / 3600);
+    var m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return d + "d " + h + "h " + m + "m";
+    if (h > 0) return h + "h " + m + "m";
+    return m + "m";
+  }
+
   /* ── Plugin ──────────────────────────────────────── */
 
   function DashboardBoard(element, options) {
@@ -66,6 +77,14 @@
     this.$temp = this.$root.find("#temp");
     this.$timestamp = this.$root.find("#dashboardTimestamp");
     this.$actions = this.$root.find("[data-action]");
+
+    // System metrics elements
+    this.$sysCpu = this.$root.find("#sysCpu");
+    this.$sysMem = this.$root.find("#sysMem");
+    this.$sysDisk = this.$root.find("#sysDisk");
+    this.$sysCpuTemp = this.$root.find("#sysCpuTemp");
+    this.$sysUptime = this.$root.find("#sysUptime");
+    this.$systemStatus = this.$root.find("#systemStatus");
 
     // Capture elements
     this.$btnCapture = this.$root.find("#btnCapture");
@@ -79,6 +98,7 @@
     this.timerId = null;
     this.galleryTimerId = null;
     this.knownCaptureIds = {};
+    this.socket = null;
   }
 
   DashboardBoard.prototype.init = function () {
@@ -111,7 +131,66 @@
       self.loadGallery();
     }, this.options.galleryPollMs);
 
+    // Connect SocketIO for system metrics
+    this.connectSocket();
+
     this.$root.attr("aria-busy", "false");
+    return this;
+  };
+
+  /* ── Socket.IO ───────────────────────────────────── */
+
+  DashboardBoard.prototype.connectSocket = function () {
+    var self = this;
+    if (!window.io) return;
+
+    this.socket = window.io(undefined, {
+      transports: ["websocket", "polling"],
+    });
+
+    this.socket.on("connect", function () {
+      if (self.$systemStatus.length) {
+        self.$systemStatus
+          .html('<span class="d-inline-block rounded-circle bg-success me-1" style="width:6px;height:6px"></span> Live')
+          .removeClass("bg-warning bg-danger")
+          .addClass("bg-success bg-opacity-25 text-success border border-success border-opacity-25");
+      }
+    });
+
+    this.socket.on("system:update", function (data) {
+      self.updateSystemMetrics(data);
+    });
+
+    this.socket.on("disconnect", function () {
+      if (self.$systemStatus.length) {
+        self.$systemStatus
+          .html('<span class="d-inline-block rounded-circle bg-danger me-1" style="width:6px;height:6px"></span> Disconnected')
+          .removeClass("bg-success bg-warning")
+          .addClass("bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25");
+      }
+    });
+  };
+
+  /* ── System Metrics ───────────────────────────────── */
+
+  DashboardBoard.prototype.updateSystemMetrics = function (data) {
+    if (!data) return this;
+
+    if (data.cpu_usage !== undefined && this.$sysCpu.length) {
+      this.$sysCpu.text(Number(data.cpu_usage).toFixed(0) + "%");
+    }
+    if (data.memory_usage !== undefined && this.$sysMem.length) {
+      this.$sysMem.text(Number(data.memory_usage).toFixed(0) + "%");
+    }
+    if (data.disk_usage !== undefined && this.$sysDisk.length) {
+      this.$sysDisk.text(Number(data.disk_usage).toFixed(0) + "%");
+    }
+    if (data.cpu_temperature !== undefined && this.$sysCpuTemp.length) {
+      this.$sysCpuTemp.text(data.cpu_temperature + "\u00b0C");
+    }
+    if (data.uptime !== undefined && this.$sysUptime.length) {
+      this.$sysUptime.text(formatUptime(data.uptime));
+    }
     return this;
   };
 
@@ -164,45 +243,38 @@
 
     this.$btnCapture.prop("disabled", true);
     this.$captureStatus
-      .html('<i data-feather="loader"></i> Capturing...')
-      .removeClass("overlay-chip--success overlay-chip--danger")
-      .addClass("overlay-chip--accent");
+      .html('<i class="bi bi-arrow-repeat spin"></i> Capturing...')
+      .removeClass("bg-success bg-danger")
+      .addClass("bg-info text-dark");
 
     $.ajax({
       url: this.options.capturesUrl,
       method: "POST",
       success: function (capture) {
         self.$captureStatus
-          .html('<i data-feather="check-circle"></i> Captured!')
-          .removeClass("overlay-chip--accent overlay-chip--danger")
-          .addClass("overlay-chip--success");
+          .html('<i class="bi bi-check-circle me-1"></i> Captured!')
+          .removeClass("bg-info bg-danger")
+          .addClass("bg-success");
 
         self.loadGallery();
 
         if (self.$cameraPreview.length && capture.thumbnail_url) {
           self.$cameraPreview.attr("src", capture.thumbnail_url + "?t=" + Date.now());
         }
-
-        if (window.feather) {
-          feather.replace({ width: 18, height: 18 });
-        }
       },
       error: function () {
         self.$captureStatus
-          .html('<i data-feather="alert-triangle"></i> Failed')
-          .removeClass("overlay-chip--accent overlay-chip--success")
-          .addClass("overlay-chip--danger");
+          .html('<i class="bi bi-exclamation-triangle me-1"></i> Failed')
+          .removeClass("bg-info bg-success")
+          .addClass("bg-danger");
       },
       complete: function () {
         self.$btnCapture.prop("disabled", false);
         window.setTimeout(function () {
           self.$captureStatus
-            .html('<i data-feather="check-circle"></i> Ready')
-            .removeClass("overlay-chip--accent overlay-chip--danger")
-            .addClass("overlay-chip--success");
-          if (window.feather) {
-            feather.replace({ width: 18, height: 18 });
-          }
+            .html('<i class="bi bi-check-circle me-1"></i> Ready')
+            .removeClass("bg-info bg-danger")
+            .addClass("bg-success");
         }, 3000);
       },
     });
@@ -296,6 +368,10 @@
     if (this.galleryTimerId) {
       window.clearInterval(this.galleryTimerId);
       this.galleryTimerId = null;
+    }
+    if (this.socket && typeof this.socket.disconnect === "function") {
+      this.socket.disconnect();
+      this.socket = null;
     }
     this.$root.off(".robotDashboardBoard");
     this.$gallery.off(".robotDashboardGallery");
