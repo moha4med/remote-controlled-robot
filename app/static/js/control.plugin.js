@@ -2,18 +2,17 @@
  * Robot control surface plugin.
  *
  * Responsibilities:
- * - Bind directional commands with delegated events via `/api/v1/move`.
+ * - Bind directional commands via `/api/v1/move`.
  * - Handle touch gestures for swipe/press interactions.
- * - Poll telemetry and update overlay strip, battery bars, side panel, compass.
+ * - Poll telemetry and update overlay strip, battery bars, side panel.
  * - Animate numeric value transitions.
- *
- * State is stored with `$.data()` for lightweight lifecycle management.
+ * - Mobile: fullscreen camera by default, slide-up controls drawer.
  */
 (function ($) {
   "use strict";
 
   var DEFAULTS = {
-    moveUrl: "/api/v1/move",
+    moveUrl: "/api/v1/robot/move",
     sensorsUrl: "/api/v1/sensors/",
     statusUrl: "/api/v1/status",
     pollIntervalMs: 3000,
@@ -28,6 +27,7 @@
   }
 
   function animateValue($el, newVal, suffix, duration) {
+    if (!$el || !$el.length) return;
     var current = parseFloat($el.data("value")) || 0;
     var target = coerceNumber(newVal);
     if (target === null) {
@@ -60,24 +60,8 @@
     });
   }
 
-  function setHeading(degrees) {
-    var $needle = $(".compass-needle");
-    if (!$needle.length) return;
-    var deg = coerceNumber(degrees) || 0;
-    $needle.css({
-      transform: "translate(-50%, -100%) rotate(" + deg + "deg)",
-      transition: "transform 300ms ease",
-    });
-    var $badge = $("#heading-badge");
-    if ($badge.length) $badge.text(Math.round(deg) + "\u00b0");
-  }
-
-  function normalizeSensorData(data) {
-    if (!data) return null;
-    return {
-      temp: coerceNumber(data.temperature !== undefined ? data.temperature : data.temp),
-      humidity: coerceNumber(data.humidity),
-    };
+  function updateText($el, text) {
+    if ($el && $el.length) $el.text(text);
   }
 
   /* ── Plugin ──────────────────────────────────────── */
@@ -86,32 +70,42 @@
     this.$root = $(element);
     this.options = $.extend({}, DEFAULTS, options);
     this.options.sensorsUrl = this.$root.data("sensorsUrl") || this.options.sensorsUrl;
-    this.$camera = this.$root.find("#cameraZone");
-    this.$gesture = this.$root.find("#gestureZone");
+
+    // Mobile elements
+    this.$mobileCamera = this.$root.find(".mobile-camera-wrap");
+    this.$mobileDrawer = this.$root.find("#mobileControls");
+    this.$mobileToggle = this.$root.find(".mobile-toggle-controls");
+
+    // Desktop elements
     this.$buttons = this.$root.find("[data-command]");
 
-    // Telemetry strip overlay
+    // Overlay telemetry (desktop)
     this.$temp = this.$root.find("#topTemp");
     this.$humidity = this.$root.find("#topHumidity");
     this.$battery = this.$root.find("#topBattery");
     this.$signal = this.$root.find("#topSignal");
     this.$time = this.$root.find("#topTime");
 
-    // Side panel telemetry
+    // Overlay telemetry (mobile)
+    this.$tempMobile = this.$root.find("#topTempMobile");
+    this.$humidityMobile = this.$root.find("#topHumidityMobile");
+    this.$batteryMobile = this.$root.find("#topBatteryMobile");
+    this.$signalMobile = this.$root.find("#topSignalMobile");
+    this.$timeMobile = this.$root.find("#topTimeMobile");
+
+    // Side panel telemetry (desktop)
     this.$speed = this.$root.find("#speed-value");
-    this.$altitude = this.$root.find("#altitude-value");
     this.$batteryValue = this.$root.find("#battery-value");
     this.$batteryBars = this.$root.find("#battery-bars");
     this.$signalValue = this.$root.find("#signal-value");
+    this.$robotState = this.$root.find("#robot-state");
 
-    // Status dots
-    this.$dots = {
-      temp: this.$root.find("#topTempDot"),
-      humidity: this.$root.find("#topHumidityDot"),
-      battery: this.$root.find("#topBatteryDot"),
-      signal: this.$root.find("#topSignalDot"),
-    };
-    this.lastUpdated = {};
+    // Mobile telemetry
+    this.$speedMobile = this.$root.find("#speed-value-mobile");
+    this.$batteryValueMobile = this.$root.find("#battery-value-mobile");
+    this.$signalValueMobile = this.$root.find("#signal-value-mobile");
+    this.$robotStateMobile = this.$root.find("#robot-state-mobile");
+
     this.pollTimer = null;
     this.longPressTimer = null;
     this.startX = 0;
@@ -123,13 +117,21 @@
   ControlSurface.prototype.init = function () {
     var self = this;
 
-    this.$root.attr("aria-busy", "true");
+    // Command buttons
     this.$root.on("click.robotControlSurface", "[data-command]", function (event) {
       event.preventDefault();
       self.sendCommand($(this).data("command"));
     });
 
-    this.$camera.add(this.$gesture)
+    // Mobile drawer toggle
+    if (this.$mobileToggle.length) {
+      this.$mobileToggle.on("click.robotControlSurface", function () {
+        self.$mobileDrawer.toggleClass("show");
+      });
+    }
+
+    // Touch gestures on camera
+    this.$mobileCamera.add(this.$root.find(".camera-wrap"))
       .on("touchstart.robotControlSurface", function (event) {
         self.onTouchStart(event);
       })
@@ -140,11 +142,12 @@
         self.onTouchEnd(event);
       });
 
+    // Start polling
     this.pollTelemetry();
     this.pollTimer = window.setInterval(function () {
       self.pollTelemetry();
     }, this.options.pollIntervalMs);
-    this.$root.attr("aria-busy", "false");
+
     return this;
   };
 
@@ -160,7 +163,6 @@
     this.clearLongPress();
     this.longPressTimer = window.setTimeout(function () {
       self.sendCommand("stop");
-      self.$gesture.addClass("is-active");
     }, 650);
   };
 
@@ -182,7 +184,6 @@
     var threshold = 40;
 
     this.clearLongPress();
-    this.$gesture.removeClass("is-active");
 
     if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
       this.sendCommand(
@@ -215,14 +216,16 @@
   /* ── Telemetry ───────────────────────────────────── */
 
   ControlSurface.prototype.updateTelemetry = function (statusData, sensorData) {
+    var self = this;
+
     if (sensorData) {
       if (sensorData.temperature !== undefined) {
         animateValue(this.$temp, sensorData.temperature, "\u00b0C");
-        this.markFresh("temp");
+        updateText(this.$tempMobile, (sensorData.temperature !== null ? sensorData.temperature : "--") + "\u00b0C");
       }
       if (sensorData.humidity !== undefined) {
         animateValue(this.$humidity, sensorData.humidity, "%");
-        this.markFresh("humidity");
+        updateText(this.$humidityMobile, (sensorData.humidity !== null ? sensorData.humidity : "--") + "%");
       }
     }
 
@@ -230,47 +233,23 @@
       if (statusData.battery !== undefined) {
         animateValue(this.$battery, statusData.battery, "%");
         animateValue(this.$batteryValue, statusData.battery, "%");
+        updateText(this.$batteryMobile, statusData.battery + "%");
         updateBatteryBars(this.$batteryBars, statusData.battery);
-        this.markFresh("battery");
       }
       if (statusData.signal !== undefined) {
         animateValue(this.$signal, statusData.signal, "%");
         animateValue(this.$signalValue, statusData.signal, "%");
-        this.markFresh("signal");
+        updateText(this.$signalMobile, statusData.signal + "%");
       }
-      if (statusData.speed !== undefined) {
-        animateValue(this.$speed, statusData.speed, " km/h");
-      }
-      if (statusData.altitude !== undefined) {
-        animateValue(this.$altitude, statusData.altitude, " m");
-      }
-      if (statusData.heading !== undefined) {
-        setHeading(statusData.heading);
+      if (statusData.state !== undefined) {
+        updateText(this.$robotState, statusData.state);
+        updateText(this.$robotStateMobile, statusData.state);
       }
     }
 
-    this.$time.text(new Date().toLocaleTimeString());
-  };
-
-  ControlSurface.prototype.markFresh = function (key) {
-    var $metric = this.$root.find("#metric" + key.charAt(0).toUpperCase() + key.slice(1));
-    if ($metric.length) {
-      $metric.removeClass("is-stale").attr("title", "Updated: just now");
-    }
-    if (this.$dots[key] && this.$dots[key].length) {
-      this.$dots[key].attr("class", "status-dot status-dot--busy");
-    }
-    this.lastUpdated[key] = Date.now();
-  };
-
-  ControlSurface.prototype.markStale = function (key) {
-    var $metric = this.$root.find("#metric" + key.charAt(0).toUpperCase() + key.slice(1));
-    if ($metric.length) {
-      $metric.addClass("is-stale").attr("title", "Stale data");
-    }
-    if (this.$dots[key] && this.$dots[key].length) {
-      this.$dots[key].attr("class", "status-dot");
-    }
+    var timeStr = new Date().toLocaleTimeString();
+    updateText(this.$time, timeStr);
+    updateText(this.$timeMobile, timeStr);
   };
 
   ControlSurface.prototype.pollTelemetry = function () {
@@ -287,14 +266,10 @@
       .fail(function () {
         $.getJSON(self.options.sensorsUrl)
           .done(function (sensors) { self.updateTelemetry(null, sensors); })
-          .fail(function () {
-            $.each(["temp", "humidity"], function (_, k) { self.markStale(k); });
-          });
+          .fail(function () {});
         $.getJSON(self.options.statusUrl)
           .done(function (status) { self.updateTelemetry(status, null); })
-          .fail(function () {
-            $.each(["battery", "signal"], function (_, k) { self.markStale(k); });
-          });
+          .fail(function () {});
       });
   };
 
@@ -304,8 +279,8 @@
       this.pollTimer = null;
     }
     this.clearLongPress();
-    this.$camera.add(this.$gesture).off(".robotControlSurface");
     this.$root.off(".robotControlSurface");
+    this.$mobileCamera.off(".robotControlSurface");
     this.$root.removeData("robotControlSurface");
   };
 

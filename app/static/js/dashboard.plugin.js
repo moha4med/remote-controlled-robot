@@ -7,8 +7,6 @@
  * - Handle image capture via `/api/v1/captures/`.
  * - Display capture gallery with thumbnails and full-size preview.
  * - Delegate quick-action button clicks to `/api/v1/events`.
- *
- * State is stored with `$.data()` for lightweight lifecycle management.
  */
 (function ($) {
   "use strict";
@@ -38,7 +36,6 @@
     }
     suffix = suffix || "";
     duration = duration || 300;
-
     $({ val: current }).animate({ val: target }, {
       duration: duration,
       easing: "swing",
@@ -165,7 +162,6 @@
   DashboardBoard.prototype.triggerCapture = function () {
     var self = this;
 
-    // Lock button during capture
     this.$btnCapture.prop("disabled", true);
     this.$captureStatus
       .html('<i data-feather="loader"></i> Capturing...')
@@ -181,15 +177,12 @@
           .removeClass("overlay-chip--accent overlay-chip--danger")
           .addClass("overlay-chip--success");
 
-        // Immediately refresh gallery
         self.loadGallery();
 
-        // Flash preview briefly
         if (self.$cameraPreview.length && capture.thumbnail_url) {
           self.$cameraPreview.attr("src", capture.thumbnail_url + "?t=" + Date.now());
         }
 
-        // Re-initialize feather icons for the new content
         if (window.feather) {
           feather.replace({ width: 18, height: 18 });
         }
@@ -202,7 +195,6 @@
       },
       complete: function () {
         self.$btnCapture.prop("disabled", false);
-        // Reset status after 3s
         window.setTimeout(function () {
           self.$captureStatus
             .html('<i data-feather="check-circle"></i> Ready')
@@ -220,7 +212,6 @@
 
   DashboardBoard.prototype.loadGallery = function () {
     var self = this;
-
     $.getJSON(this.options.capturesUrl)
       .done(function (captures) {
         self.renderGallery(captures);
@@ -238,12 +229,10 @@
     this.$captureCount.text(captures.length);
     this.$galleryCountText.text(captures.length);
 
-    // Track new captures for scroll behavior
     var hadItems = Object.keys(this.knownCaptureIds).length > 0;
     var prevFirstId = Object.keys(this.knownCaptureIds)[0];
     var hasNew = false;
 
-    // Build gallery HTML
     var html = "";
     var self = this;
     $.each(captures, function (_, cap) {
@@ -262,13 +251,11 @@
     });
     this.$gallery.empty().append(html);
 
-    // Click to preview full size
     this.$gallery.off("click.robotDashboardGallery").on("click.robotDashboardGallery", ".capture-card", function () {
       var url = $(this).data("url");
       if (url) self.showPreview(url);
     });
 
-    // Auto-scroll to top if new capture arrived
     if (hasNew && this.$gallery.length) {
       this.$gallery.scrollTop(0);
     }
@@ -285,14 +272,12 @@
     );
     $("body").append($overlay);
 
-    // Close on click outside image, or on close button
     $overlay.on("click", function (e) {
       if (e.target === this || $(e.target).hasClass("capture-preview-close")) {
         $overlay.remove();
       }
     });
 
-    // Close on Escape
     $(document).one("keydown.robotDashboardPreview", function (e) {
       if (e.key === "Escape") {
         $overlay.remove();
@@ -320,17 +305,14 @@
 
   $.fn.robotDashboardBoard = function (methodOrOptions) {
     var args = Array.prototype.slice.call(arguments, 1);
-
     return this.each(function () {
       var instance = $.data(this, "robotDashboardBoard");
-
       if (!instance) {
         instance = new DashboardBoard(this, methodOrOptions);
         $.data(this, "robotDashboardBoard", instance);
         instance.init();
         return;
       }
-
       if (typeof methodOrOptions === "string" && typeof instance[methodOrOptions] === "function") {
         instance[methodOrOptions].apply(instance, args);
       }

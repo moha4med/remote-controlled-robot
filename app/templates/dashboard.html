@@ -4,228 +4,172 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Robot Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style/design-tokens.css') }}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style/dashboard.css') }}"
-    />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/dashboard.css') }}" />
   </head>
-  <body class="page-dashboard">
-    <div class="app-shell dashboard-shell" data-dashboard-board>
-      <nav
-        class="sidebar fixed inset-x-0 top-0 z-50 hidden w-full max-h-screen min-h-screen md:static md:z-auto md:flex md:flex-col md:w-16 md:max-h-none md:min-h-0"
-        id="mobileSidebar"
-        aria-label="Primary navigation"
-      >
+  <body class="page-dashboard" data-dashboard-board>
+
+    <div class="d-flex vh-100">
+
+      <!-- Sidebar -->
+      <nav class="sidebar" aria-label="Primary navigation">
         <div class="sidebar-logo" aria-hidden="true">RC</div>
-        <ul class="sidebar-nav">
-          <li>
-            <a class="nav-item active" href="{{ url_for('dashboard.index') }}" aria-label="Dashboard">
-              <i data-feather="activity"></i>
-            </a>
-          </li>
-          <li>
-            <a class="nav-item" href="{{ url_for('control.index') }}" aria-label="Control">
-              <i data-feather="sliders"></i>
-            </a>
-          </li>
-          <li>
-            <a class="nav-item" href="{{ url_for('sensors.index') }}" aria-label="Sensors">
-              <i data-feather="bar-chart-2"></i>
-            </a>
-          </li>
+        <ul class="nav flex-column sidebar-nav">
+          <li class="nav-item"><a class="nav-link active" href="{{ url_for('dashboard.index') }}" aria-label="Dashboard"><i class="bi bi-activity"></i></a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('control.index') }}" aria-label="Control"><i class="bi bi-sliders"></i></a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('sensors.index') }}" aria-label="Sensors"><i class="bi bi-bar-chart"></i></a></li>
         </ul>
-        <div class="flex flex-col gap-2 mt-auto">
-          <button
-            class="btn-icon btn-icon--square"
-            type="button"
-            data-theme-toggle
-            aria-label="Switch to light mode"
-            aria-pressed="false"
-          >
-            <i data-feather="sun"></i>
-          </button>
-          <button
-            class="btn-icon btn-icon--square"
-            type="button"
-            id="sidebarFullscreen"
-            aria-label="Enter fullscreen"
-          >
-            <i data-feather="maximize"></i>
-          </button>
-        </div>
-        <div class="sidebar-footer">
-          <div class="avatar" aria-hidden="true"></div>
-          <button class="btn-icon btn-icon--square" type="button" aria-label="Power">
-            <i data-feather="power"></i>
+        <div class="mt-auto">
+          <button class="btn btn-outline-secondary btn-sm rounded-2" type="button" data-theme-toggle aria-label="Toggle theme">
+            <i class="bi bi-sun"></i>
           </button>
         </div>
       </nav>
 
-      <main class="main-content dashboard-main">
-        <header class="page-header">
-          <div class="lead-stack">
-            <p class="page-eyebrow">
-              <i data-feather="camera" aria-hidden="true"></i>
-              Camera Hub
-            </p>
-            <h1 class="page-title">Live Robot Feed</h1>
-            <p class="page-subtitle">
-              A landing view for the telemetry suite. The layout follows the DJI Mavic Pro style guide while staying inside the approved robotics palette.
-            </p>
+      <!-- Main -->
+      <main class="flex-grow-1 overflow-auto p-3 p-md-4">
+
+        <!-- Header -->
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+          <div>
+            <p class="text-muted text-uppercase mb-1" style="font-size:11px;letter-spacing:.08em">Robot Dashboard</p>
+            <h1 class="h4 fw-bold mb-0">Live Feed & Telemetry</h1>
           </div>
-          <div class="status-row">
-            <span class="badge badge--online">
-              <span class="status-dot status-dot--online" aria-hidden="true"></span>
-              Live
+          <div class="d-flex gap-2">
+            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">
+              <span class="d-inline-block rounded-circle bg-success me-1" style="width:6px;height:6px"></span> Live
             </span>
-            <span class="badge badge--busy">
-              <span class="status-dot status-dot--busy" aria-hidden="true"></span>
-              Stream Ready
+            <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25">
+              <span class="d-inline-block rounded-circle bg-info me-1" style="width:6px;height:6px"></span> Stream Ready
             </span>
           </div>
-        </header>
+        </div>
 
-        <div class="panel-grid dashboard-grid">
-          <section class="panel panel--feed dashboard-panel" id="capturePanel">
-            <div class="camera-stage" id="cameraPreviewStage">
-              <img
-                id="cameraPreviewImg"
-                src="{{ url_for('static', filename='images/camera_fade_frame_save_011.png') }}"
-                alt="Camera preview from the robot feed"
-                class="camera-stage__image"
-              />
-              <div class="feed-overlay">
-                <div class="feed-grid-line vertical grid-1"></div>
-                <div class="feed-grid-line vertical grid-2"></div>
-                <div class="feed-grid-line horizontal grid-3"></div>
-                <div class="feed-grid-line horizontal grid-4"></div>
-                <div class="feed-reticle"></div>
-              </div>
-              <div class="camera-overlay camera-overlay--top">
-                <span class="overlay-chip overlay-chip--accent">
-                  <span class="status-dot status-dot--live" aria-hidden="true"></span>
-                  Live Stream
-                </span>
-                <span class="overlay-chip">Frame Sync 12 ms</span>
-              </div>
-              <div class="camera-overlay camera-overlay--bottom">
-                <button class="overlay-chip overlay-chip--accent" id="btnCapture" type="button" aria-label="Capture image">
-                  <i data-feather="camera"></i>
-                  Capture
-                </button>
-                <span class="overlay-chip overlay-chip--success" id="captureStatus">
-                  <i data-feather="check-circle"></i>
-                  Ready
-                </span>
-              </div>
-            </div>
-            <div class="status-bar">
-              <div class="status-bar__group">
-                <span class="status-dot status-dot--online" aria-hidden="true"></span>
-                <span class="status-label">Telemetry live</span>
-              </div>
-              <div class="status-bar__group">
-                <span class="status-label">Last update</span>
-                <span id="dashboardTimestamp">12:42:18</span>
-              </div>
-              <div class="status-bar__group">
-                <span class="status-label">Captures</span>
-                <span id="captureCount" class="font-mono text-accent">0</span>
-              </div>
-            </div>
-          </section>
+        <div class="row g-3">
 
-          <section class="panel dashboard-panel">
-            <div class="panel__header">
-              <div>
-                <p class="panel__eyebrow">Robot Status</p>
-                <h2 class="panel__title">Core Telemetry</h2>
+          <!-- Camera Preview -->
+          <div class="col-lg-7">
+            <div class="card h-100">
+              <div class="card-body p-0 position-relative camera-stage">
+                <img id="cameraPreviewImg" src="{{ url_for('static', filename='images/camera_fade_frame_save_011.png') }}" alt="Camera preview" class="camera-stage__image" />
+                <div class="camera-overlay camera-overlay--top">
+                  <span class="badge bg-danger bg-opacity-75"><span class="d-inline-block rounded-circle bg-white me-1" style="width:6px;height:6px"></span> Live Stream</span>
+                </div>
+                <div class="camera-overlay camera-overlay--bottom">
+                  <button class="btn btn-sm btn-info" id="btnCapture" type="button">
+                    <i class="bi bi-camera-fill me-1"></i> Capture
+                  </button>
+                  <span class="badge bg-success bg-opacity-75" id="captureStatus">
+                    <i class="bi bi-check-circle me-1"></i> Ready
+                  </span>
+                </div>
               </div>
-              <span class="badge badge--busy">
-                <span class="status-dot status-dot--busy" aria-hidden="true"></span>
-                Active
-              </span>
+              <div class="card-footer d-flex flex-wrap gap-3 py-2 px-3">
+                <div class="d-flex align-items-center gap-1">
+                  <span class="d-inline-block rounded-circle bg-success" style="width:6px;height:6px"></span>
+                  <small class="text-muted">Telemetry live</small>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                  <small class="text-muted">Last update</small>
+                  <small class="font-mono" id="dashboardTimestamp">--:--:--</small>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                  <small class="text-muted">Captures</small>
+                  <small class="font-mono text-info fw-bold" id="captureCount">0</small>
+                </div>
+              </div>
             </div>
-            <div class="param-grid">
-              <div class="param-row">
-                <span class="param-label">Battery</span>
-                <span class="param-value text-accent" id="batteryValue">80%</span>
-              </div>
-              <div class="param-row">
-                <span class="param-label">Signal</span>
-                <span class="param-value" id="signal">92%</span>
-              </div>
-              <div class="param-row">
-                <span class="param-label">Mode</span>
-                <span class="param-value" id="modeValue">Manual</span>
-              </div>
-              <div class="param-row">
-                <span class="param-label">Temp</span>
-                <span class="param-value" id="temp">47C</span>
-              </div>
-            </div>
-            <span id="battery" class="visually-hidden">80%</span>
-            <span id="mode" class="visually-hidden">Manual</span>
-          </section>
+          </div>
 
-          <section class="panel dashboard-panel">
-            <div class="panel__header">
-              <div>
-                <p class="panel__eyebrow">Quick Actions</p>
-                <h2 class="panel__title">Mission Controls</h2>
+          <!-- Telemetry -->
+          <div class="col-lg-5">
+            <div class="card h-100">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">Robot Status</p>
+                  <h2 class="h6 fw-bold mb-0">Core Telemetry</h2>
+                </div>
+                <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25">Active</span>
+              </div>
+              <div class="card-body">
+                <div class="row g-3 text-center">
+                  <div class="col-6">
+                    <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
+                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Battery</div>
+                      <div class="h4 fw-bold text-info mb-0" id="batteryValue">80%</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
+                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Signal</div>
+                      <div class="h4 fw-bold mb-0" id="signal">92%</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
+                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Mode</div>
+                      <div class="h4 fw-bold mb-0" id="modeValue">Manual</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
+                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Temp</div>
+                      <div class="h4 fw-bold mb-0" id="temp">47°C</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="action-row">
-              <button class="button button--primary action-btn" data-action="start" type="button">
-                Start Mission
-              </button>
-              <button class="button action-btn" data-action="stop" type="button">
-                Stop
-              </button>
-              <button class="button action-btn" data-action="return" type="button">
-                Return
-              </button>
-              <button class="button button--danger action-btn" data-action="emergency" type="button">
-                Emergency
-              </button>
-            </div>
-          </section>
+          </div>
 
-          <section class="panel dashboard-panel" id="galleryPanel">
-            <div class="panel__header">
-              <div>
-                <p class="panel__eyebrow">Gallery</p>
-                <h2 class="panel__title">Captured Images</h2>
+          <!-- Quick Actions -->
+          <div class="col-lg-5">
+            <div class="card">
+              <div class="card-header">
+                <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">Quick Actions</p>
+                <h2 class="h6 fw-bold mb-0">Mission Controls</h2>
               </div>
-              <span class="badge" id="galleryCount">
-                <i data-feather="image"></i>
-                <span id="galleryCountText">0</span>
-              </span>
-            </div>
-            <div class="capture-grid" id="captureGallery">
-              <!-- Captures loaded dynamically by dashboard.plugin.js -->
-              <div class="capture-grid__empty" id="galleryEmpty">
-                <p class="inline-caption">No captures yet. Click <strong>Capture</strong> above to take one.</p>
+              <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                  <button class="btn btn-primary action-btn" data-action="start" type="button">Start Mission</button>
+                  <button class="btn btn-outline-secondary action-btn" data-action="stop" type="button">Stop</button>
+                  <button class="btn btn-outline-secondary action-btn" data-action="return" type="button">Return</button>
+                  <button class="btn btn-danger action-btn" data-action="emergency" type="button">Emergency</button>
+                </div>
               </div>
             </div>
-          </section>
+          </div>
+
+          <!-- Gallery -->
+          <div class="col-lg-7">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">Gallery</p>
+                  <h2 class="h6 fw-bold mb-0">Captured Images</h2>
+                </div>
+                <span class="badge bg-secondary"><i class="bi bi-image me-1"></i> <span id="galleryCountText">0</span></span>
+              </div>
+              <div class="card-body">
+                <div class="capture-grid" id="captureGallery">
+                  <div class="text-center text-muted py-4" id="galleryEmpty">
+                    <small>No captures yet. Click <strong>Capture</strong> above.</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </main>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/dashboard.plugin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/page-init.js') }}"></script>
   </body>

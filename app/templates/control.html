@@ -4,494 +4,171 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Robot Control</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style/design-tokens.css') }}"
-    />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/control.css') }}" />
   </head>
-  <body class="page-control">
-    <div
-      class="app-shell items-stretch md:grid-cols-[minmax(0,64px)_minmax(0,1fr)]"
-      data-control-surface
-      data-sensors-url="{{ url_for('sensors_api.environment') }}"
-    >
-      <nav
-        class="sidebar fixed inset-x-0 top-0 z-50 hidden flex md:flex flex-col w-16 max-h-screen min-h-screen md:static md:z-auto md:max-h-none md:min-h-0"
-        id="mobileSidebar"
-        aria-label="Primary navigation"
-      >
-        <div class="sidebar-logo" aria-hidden="true">RC</div>
-        <ul class="sidebar-nav">
-          <li>
-            <a
-              class="nav-item"
-              href="{{ url_for('dashboard.index') }}"
-              aria-label="Dashboard"
-            >
-              <i data-feather="activity"></i>
-            </a>
-          </li>
-          <li>
-            <a
-              class="nav-item active"
-              href="{{ url_for('control.index') }}"
-              aria-label="Control"
-            >
-              <i data-feather="sliders"></i>
-            </a>
-          </li>
-          <li>
-            <a
-              class="nav-item"
-              href="{{ url_for('sensors.index') }}"
-              aria-label="Sensors"
-            >
-              <i data-feather="bar-chart-2"></i>
-            </a>
-          </li>
-        </ul>
+  <body class="page-control" data-control-surface data-sensors-url="{{ url_for('sensors_api.environment') }}">
 
-        <div class="flex flex-col gap-2 mt-auto">
-          <button
-            class="btn-icon btn-icon--square"
-            type="button"
-            data-theme-toggle
-            aria-label="Switch to light mode"
-            aria-pressed="false"
-          >
-            <i data-feather="sun"></i>
-          </button>
-          <button
-            class="btn-icon btn-icon--square"
-            type="button"
-            id="sidebarFullscreen"
-            aria-label="Enter fullscreen"
-          >
-            <i data-feather="maximize"></i>
-          </button>
+    <!-- Mobile: fullscreen camera by default -->
+    <div class="d-md-none mobile-camera-wrap">
+      <img id="liveStreamMobile" src="{{ url_for('camera.video_feed') }}" alt="Live camera stream" class="mobile-camera-feed" />
+      <div class="mobile-camera-overlay-top">
+        <span class="badge bg-dark bg-opacity-75">RCR-001</span>
+        <span class="badge bg-dark bg-opacity-75 font-mono" id="topTimeMobile">--:--:--</span>
+      </div>
+      <div class="mobile-camera-overlay-bottom">
+        <span class="badge bg-dark bg-opacity-75" id="topTempMobile">--°C</span>
+        <span class="badge bg-dark bg-opacity-75" id="topHumidityMobile">--%</span>
+        <span class="badge bg-dark bg-opacity-75" id="topBatteryMobile">--%</span>
+        <span class="badge bg-dark bg-opacity-75" id="topSignalMobile">--%</span>
+      </div>
+      <!-- Tap to show controls -->
+      <button class="btn btn-sm btn-outline-light mobile-toggle-controls" type="button">
+        <i class="bi bi-sliders"></i>
+      </button>
+    </div>
+
+    <!-- Mobile controls drawer -->
+    <div class="d-md-none mobile-controls-drawer" id="mobileControls">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0 text-uppercase text-muted" style="font-size:11px;letter-spacing:.08em">Controls</h6>
+        <button class="btn btn-sm btn-outline-secondary mobile-toggle-controls" type="button">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="dpad mb-3" aria-label="Directional controls">
+        <button class="dpad-btn dpad-btn--up" data-command="forward" type="button"><i class="bi bi-chevron-up"></i></button>
+        <button class="dpad-btn dpad-btn--left" data-command="left" type="button"><i class="bi bi-chevron-left"></i></button>
+        <button class="dpad-center" data-command="stop" type="button"><span class="dpad-label">Stop</span></button>
+        <button class="dpad-btn dpad-btn--right" data-command="right" type="button"><i class="bi bi-chevron-right"></i></button>
+        <button class="dpad-btn dpad-btn--down" data-command="backward" type="button"><i class="bi bi-chevron-down"></i></button>
+      </div>
+
+      <button class="btn btn-danger w-100 mb-3" data-command="stop" type="button">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>Emergency Stop
+      </button>
+
+      <div class="row g-2 text-center">
+        <div class="col-6">
+          <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
+            <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Battery</div>
+            <div class="fw-bold" id="battery-value-mobile">75%</div>
+          </div>
         </div>
+        <div class="col-6">
+          <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
+            <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Signal</div>
+            <div class="fw-bold" id="signal-value-mobile">92%</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
+            <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Speed</div>
+            <div class="fw-bold" id="speed-value-mobile">0 km/h</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
+            <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">State</div>
+            <div class="fw-bold text-info" id="robot-state-mobile">STOP</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <div class="sidebar-footer">
-          <div class="avatar" aria-hidden="true"></div>
-          <button
-            class="btn-icon btn-icon--square"
-            type="button"
-            aria-label="Power"
-          >
-            <i data-feather="power"></i>
+    <!-- Desktop layout -->
+    <div class="d-none d-md-flex app-layout">
+
+      <!-- Sidebar -->
+      <nav class="sidebar" aria-label="Primary navigation">
+        <div class="sidebar-logo" aria-hidden="true">RC</div>
+        <ul class="nav flex-column sidebar-nav">
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.index') }}" aria-label="Dashboard"><i class="bi bi-activity"></i></a></li>
+          <li class="nav-item"><a class="nav-link active" href="{{ url_for('control.index') }}" aria-label="Control"><i class="bi bi-sliders"></i></a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('sensors.index') }}" aria-label="Sensors"><i class="bi bi-bar-chart"></i></a></li>
+        </ul>
+        <div class="mt-auto">
+          <button class="btn btn-outline-secondary btn-sm rounded-2" type="button" data-theme-toggle aria-label="Toggle theme">
+            <i class="bi bi-sun"></i>
           </button>
         </div>
       </nav>
 
-      <main
-        class="main-content min-h-screen min-w-screen gap-0 p-0 md:gap-4 md:p-4"
-      >
-        <div
-          class="grid h-full grid-cols-1 grid-rows-1 gap-0 lg:grid-cols-[minmax(0,58fr)_minmax(0,42fr)] md:grid-rows-2 md:gap-[14px]"
-        >
-          <section
-            class="panel flex flex-col justify-start gap-3 p-0 md:col-span-1 md:row-span-2 md:p-4"
-          >
-            <div
-              class="panel__header absolute left-0 right-0 top-0 z-40 hidden border-b border-white/10 bg-black/60 px-3 py-2 md:static md:flex md:border-0 md:bg-transparent md:px-0 md:py-0"
-              id="mobilePanelHeader"
-            >
-              <div>
-                <p class="panel__eyebrow">Navigation</p>
-                <h2 class="panel__title">Command Surface</h2>
-              </div>
-              <div class="tab-group hidden md:flex">
-                <button
-                  class="tab-btn active"
-                  data-target="#control-video"
-                  type="button"
-                >
-                  <i data-feather="video"></i>
-                  Video
-                </button>
-                <button
-                  class="tab-btn"
-                  data-target="#control-photo"
-                  type="button"
-                >
-                  <i data-feather="camera"></i>
-                  Photo
-                </button>
-              </div>
-            </div>
+      <!-- Main content -->
+      <div class="flex-grow-1 d-flex flex-column overflow-hidden">
 
-            <div
-              class="tab-panel is-active h-screen min-h-screen md:h-auto md:min-h-0"
-              id="control-video"
-            >
-              <div
-                class="panel panel--feed flex h-screen min-h-screen aspect-auto md:h-auto md:min-h-0 md:aspect-video"
-              >
-                <div
-                  class="camera-stage relative overflow-hidden h-screen min-h-screen w-full md:h-auto md:min-h-0"
-                  id="cameraZone"
-                >
-                  <!-- Video -->
-                  <img
-                    id="liveStream"
-                    src="{{ url_for('camera.video_feed') }}"
-                    alt="Live camera stream"
-                    class="absolute inset-0 w-full h-full object-cover"
-                  />
+        <!-- Camera -->
+        <div class="flex-grow-1 position-relative camera-wrap">
+          <img id="liveStream" src="{{ url_for('camera.video_feed') }}" alt="Live camera stream" class="camera-feed" />
 
-                  <!-- Grid overlay -->
-                  <div class="feed-overlay">
-                    <div class="feed-grid-line vertical grid-1"></div>
-                    <div class="feed-grid-line vertical grid-2"></div>
-                    <div class="feed-grid-line horizontal grid-3"></div>
-                    <div class="feed-grid-line horizontal grid-4"></div>
-                    <div class="feed-reticle"></div>
-                  </div>
+          <div class="camera-overlay camera-overlay--top">
+            <span class="badge bg-dark bg-opacity-75">RCR-001</span>
+            <span class="badge bg-dark bg-opacity-75 font-mono" id="topTime">--:--:--</span>
+          </div>
 
-                  <!-- Top overlay -->
-                  <div class="camera-overlay camera-overlay--top">
-                    <div class="flex items-center gap-2">
-                      <button
-                        class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-black/60 text-[var(--text-primary)] md:hidden"
-                        type="button"
-                        id="mobileChromeToggle"
-                        aria-label="Show navigation"
-                        aria-expanded="false"
-                      >
-                        <i data-feather="menu"></i>
-                      </button>
-
-                      <span class="overlay-chip">RCR-001</span>
-                    </div>
-
-                    <div class="flex flex-col items-end gap-2">
-                      <div class="overlay-group">
-                        <span class="overlay-chip">HDR</span>
-                        <span class="overlay-chip">1920:1080</span>
-                      </div>
-                      <span class="overlay-chip font-mono" id="topTime"
-                        >--:--:--</span
-                      >
-                    </div>
-                  </div>
-
-                  <!-- Bottom overlay -->
-                  <div class="camera-overlay camera-overlay--bottom">
-                    <span
-                      class="overlay-chip metric"
-                      data-key="temp"
-                      id="metricTemp"
-                      title="Updated: --"
-                    >
-                      <i data-feather="thermometer"></i>
-                      <span id="topTemp" aria-live="polite">--°C</span>
-                      <span
-                        id="topTempDot"
-                        class="status-dot status-dot--inactive"
-                        aria-hidden="true"
-                      ></span>
-                    </span>
-                    <span
-                      class="overlay-chip metric"
-                      data-key="humidity"
-                      id="metricHumidity"
-                      title="Updated: --"
-                    >
-                      <i data-feather="droplet"></i>
-                      <span id="topHumidity" aria-live="polite">--%</span>
-                      <span
-                        id="topHumidityDot"
-                        class="status-dot status-dot--inactive"
-                        aria-hidden="true"
-                      ></span>
-                    </span>
-                    <span
-                      class="overlay-chip metric"
-                      data-key="battery"
-                      id="metricBattery"
-                      title="Updated: --"
-                    >
-                      <i data-feather="battery"></i>
-                      <span id="topBattery">--%</span>
-                      <span
-                        id="topBatteryDot"
-                        class="status-dot status-dot--inactive"
-                        aria-hidden="true"
-                      ></span>
-                    </span>
-                    <span
-                      class="overlay-chip metric"
-                      data-key="signal"
-                      id="metricSignal"
-                      title="Updated: --"
-                    >
-                      <i data-feather="wifi"></i>
-                      <span id="topSignal">--</span>
-                      <span
-                        id="topSignalDot"
-                        class="status-dot status-dot--inactive"
-                        aria-hidden="true"
-                      ></span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                class="hidden flex-wrap items-center justify-between gap-[var(--space-4)] md:flex my-3"
-              >
-                <div class="dpad" aria-label="Directional controls">
-                  <button
-                    class="dpad-btn dpad-btn--up"
-                    data-command="forward"
-                    type="button"
-                  >
-                    <i data-feather="chevron-up"></i>
-                  </button>
-                  <button
-                    class="dpad-btn dpad-btn--left"
-                    data-command="left"
-                    type="button"
-                  >
-                    <i data-feather="chevron-left"></i>
-                  </button>
-                  <button class="dpad-center" data-command="stop" type="button">
-                    <span class="dpad-label">Stop</span>
-                  </button>
-                  <button
-                    class="dpad-btn dpad-btn--right"
-                    data-command="right"
-                    type="button"
-                  >
-                    <i data-feather="chevron-right"></i>
-                  </button>
-                  <button
-                    class="dpad-btn dpad-btn--down"
-                    data-command="backward"
-                    type="button"
-                  >
-                    <i data-feather="chevron-down"></i>
-                  </button>
-                </div>
-
-                <div class="button-row">
-                  <!-- <button
-                    class="btn-icon btn-icon--primary"
-                    data-command="forward"
-                    type="button"
-                    aria-label="Boost"
-                  >
-                    <i data-feather="arrow-up-right"></i>
-                  </button> -->
-                  
-                  <button
-                    class="btn-icon btn-icon--destructive"
-                    data-command="stop"
-                    type="button"
-                    aria-label="Emergency stop"
-                  >
-                    <i data-feather="alert-triangle"></i>
-                  </button>
-                </div>
-              </div>
-
-              <div
-                id="gestureZone"
-                class="hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-panel-raised)] p-[var(--space-3)] md:block"
-              >
-                <div class="panel__eyebrow">Touch Control Zone</div>
-                <p class="inline-caption">
-                  Swipe to move, tap to stop, hold for emergency stop.
-                </p>
-              </div>
-            </div>
-            <div class="tab-panel hidden md:block" id="control-photo">
-              <p class="inline-caption">
-                Photo capture mode armed. Use the main control pad to position
-                the robot.
-              </p>
-            </div>
-          </section>
-
-          <div
-            class="hidden flex-col gap-4 md:flex md:col-span-1 md:row-span-2"
-          >
-            <section class="panel content-start gap-[var(--space-3)] md:grid">
-              <div class="panel__header">
-                <div>
-                  <p class="panel__eyebrow">Robot Identity</p>
-                  <h2 class="panel__title">NOVA-02 / Control Node</h2>
-                </div>
-                <span class="badge badge--online">
-                  <span
-                    class="status-dot status-dot--online"
-                    aria-hidden="true"
-                  ></span>
-                  Connected
-                </span>
-              </div>
-              <div class="param-grid">
-                <div class="param-row">
-                  <span class="param-label">Speed</span>
-                  <span class="param-value" id="speed-value">20 km/h</span>
-                </div>
-                <div class="param-row">
-                  <span class="param-label">Altitude</span>
-                  <span class="param-value" id="altitude-value">80 m</span>
-                </div>
-                <div class="param-row">
-                  <span class="param-label">Battery</span>
-                  <div
-                    class="battery-display inline-flex items-center gap-[var(--space-2)]"
-                    id="battery-display"
-                    aria-label="Battery level"
-                  >
-                    <div
-                      class="battery-bars inline-flex items-center gap-[2px] rounded-full p-1"
-                      id="battery-bars"
-                      aria-hidden="true"
-                    >
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-bar h-14 w-2 rounded-sm bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                      <span
-                        class="battery-cap ml-0.5 h-6 w-3 rounded-full bg-[rgba(148,163,184,0.55)]"
-                      ></span>
-                    </div>
-                    <span
-                      class="battery-value min-w-[44px] text-right font-mono text-accent"
-                      id="battery-value"
-                      >75%</span
-                    >
-                  </div>
-                </div>
-                <div class="param-row">
-                  <span class="param-label">Signal</span>
-                  <span class="param-value" id="signal-value">92%</span>
-                </div>
-              </div>
-              
-              <div class="slider-wrap hidden">
-                <input
-                  type="range"
-                  class="param-slider"
-                  min="0"
-                  max="100"
-                  value="75"
-                  id="battery-slider"
-                  data-display="#battery-value"
-                  data-bars="#battery-bars"
-                />
-                <div class="slider-labels">
-                  <span>0</span>
-                  <span>100</span>
-                </div>
-              </div>
-              
-              <div class="badge badge--busy">
-                <span
-                  class="status-dot status-dot--busy"
-                  aria-hidden="true"
-                ></span>
-                Manual Control
-              </div>
-            </section>
-
-            <section class="panel content-start gap-[var(--space-3)] md:grid">
-              <div class="panel__header">
-                <div>
-                  <p class="panel__eyebrow">Orientation</p>
-                  <h2 class="panel__title">Heading & GPS</h2>
-                </div>
-                <span class="badge">
-                  <span
-                    class="status-dot status-dot--online"
-                    aria-hidden="true"
-                  ></span>
-                  Locked
-                </span>
-              </div>
-              <div class="compass">
-                <span class="compass-badge" id="heading-badge">83°</span>
-                <div class="compass-dial">
-                  <div class="compass-needle"></div>
-                </div>
-                <span class="compass-coords font-mono" id="gps-coords">
-                  50°26'3"N 30°28'50"E
-                </span>
-              </div>
-            </section>
+          <div class="camera-overlay camera-overlay--bottom">
+            <span class="badge bg-dark bg-opacity-75" id="topTemp">--°C <i class="bi bi-thermometer"></i></span>
+            <span class="badge bg-dark bg-opacity-75" id="topHumidity">--% <i class="bi bi-droplet"></i></span>
+            <span class="badge bg-dark bg-opacity-75" id="topBattery">--% <i class="bi bi-battery"></i></span>
+            <span class="badge bg-dark bg-opacity-75" id="topSignal">--% <i class="bi bi-wifi"></i></span>
           </div>
         </div>
-      </main>
+
+        <!-- Bottom control bar -->
+        <div class="control-bar p-3 border-top border-secondary">
+          <div class="row align-items-center g-3">
+            <div class="col-auto">
+              <div class="dpad" aria-label="Directional controls">
+                <button class="dpad-btn dpad-btn--up" data-command="forward" type="button"><i class="bi bi-chevron-up"></i></button>
+                <button class="dpad-btn dpad-btn--left" data-command="left" type="button"><i class="bi bi-chevron-left"></i></button>
+                <button class="dpad-center" data-command="stop" type="button"><span class="dpad-label">Stop</span></button>
+                <button class="dpad-btn dpad-btn--right" data-command="right" type="button"><i class="bi bi-chevron-right"></i></button>
+                <button class="dpad-btn dpad-btn--down" data-command="backward" type="button"><i class="bi bi-chevron-down"></i></button>
+              </div>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-danger" data-command="stop" type="button">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> E-Stop
+              </button>
+            </div>
+            <div class="col">
+              <div class="d-flex gap-3 justify-content-end text-center">
+                <div>
+                  <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Battery</div>
+                  <div class="fw-bold" id="battery-value">75%</div>
+                  <div class="battery-bars" id="battery-bars">
+                    <span class="battery-bar"></span><span class="battery-bar"></span><span class="battery-bar"></span>
+                    <span class="battery-bar"></span><span class="battery-bar"></span><span class="battery-bar"></span>
+                    <span class="battery-bar"></span><span class="battery-bar"></span><span class="battery-bar"></span>
+                    <span class="battery-bar"></span><span class="battery-bar"></span>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Signal</div>
+                  <div class="fw-bold" id="signal-value">92%</div>
+                </div>
+                <div>
+                  <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Speed</div>
+                  <div class="fw-bold" id="speed-value">0 km/h</div>
+                </div>
+                <div>
+                  <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">State</div>
+                  <div class="fw-bold text-info" id="robot-state">STOP</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://unpkg.com/feather-icons"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/control.plugin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/page-init.js') }}"></script>
   </body>
