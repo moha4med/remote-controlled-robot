@@ -11,10 +11,12 @@ from app.routes.api.v1.camera import camera_bp
 from app.routes.api.v1.sensors import sensors_bp
 from app.routes.api.v1.robot import robot_bp
 from app.routes.api.v1.status import status_bp
-from app.routes.api.v1.logs import logs_bp
 from app.routes.api.v1.captures import captures_bp
 from app.routes.api.v1.users import users_bp
 from app.routes.api.v1.settings import settings_bp
+from app.routes.api.v1.history_logs import history_logs_bp
+from app.routes.api.v1.system import system_bp
+
 from app.routes.control import control_bp
 from app.routes.dashboard import dashboard_bp
 from app.routes.sensors import sensors_page_bp
@@ -66,10 +68,11 @@ def create_app():
     app.register_blueprint(sensors_bp)
     app.register_blueprint(robot_bp)
     app.register_blueprint(status_bp)
-    app.register_blueprint(logs_bp)
     app.register_blueprint(captures_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(history_logs_bp)
+    app.register_blueprint(system_bp)
 
     # HTML frontend routes
     app.register_blueprint(control_bp)
