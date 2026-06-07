@@ -1,9 +1,10 @@
 # app/__init__.py
 
-from flask import Flask
+import os
+from flask import Flask, jsonify
 from flask_cors import CORS
 
-from app.extensions import db, jwt, bcrypt, socketio, limiter
+from app.extensions import db, jwt, bcrypt, socketio, limiter, migrate
 
 from app.routes.api.v1.auth import auth_bp
 from app.routes.api.v1.camera import camera_bp
@@ -24,20 +25,40 @@ def create_app():
 
     CORS(app, supports_credentials=True, origins=[
         "http://localhost:3000",
-        "http://192.168.4.100:3000"
+        "http://192.168.4.100:3000",
+        "http://192.168.4.108:3000",
+        "*"
     ])
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///robot.db"
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
+        "DATABASE_URL", "sqlite:///robot.db"
+    )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-    app.config["JWT_SECRET_KEY"] = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = 86400  # 24 hours
+    app.config["JWT_SECRET_KEY"] = os.environ.get(
+        "JWT_SECRET_KEY",
+        "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
+    )
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = int(os.environ.get(
+        "JWT_ACCESS_TOKEN_EXPIRES", 86400
+    ))
 
     db.init_app(app)
     jwt.init_app(app)
     bcrypt.init_app(app)
     socketio.init_app(app)
     limiter.init_app(app)
+    migrate.init_app(app, db)
+
+    # Health check
+    @app.route("/api/v1/health", methods=["GET"])
+    @limiter.limit("60/minute")
+    def health_check():
+        return jsonify({
+            "status": "ok",
+            "service": "robot-control-api",
+            "version": "1.0.0",
+        })
 
     # API v1 routes
     app.register_blueprint(auth_bp)
