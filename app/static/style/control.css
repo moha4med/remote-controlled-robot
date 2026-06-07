@@ -1,19 +1,19 @@
 /* ── Control Page — Bootstrap + Custom ───────────── */
 
 .page-control {
-  --bs-body-bg: #0a0e17;
-  --bs-body-color: #e2e8f0;
-  --bs-border-color: #1e293b;
-  --bs-secondary-color: #94a3b8;
-  background: var(--bs-body-bg);
-  color: var(--bs-body-color);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  --bs-body-bg: var(--bg-app);
+  --bs-body-color: var(--text-primary);
+  --bs-border-color: var(--border);
+  --bs-secondary-color: var(--text-secondary);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-family);
   height: 100vh;
   overflow: hidden;
 }
 
 .font-mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-family-mono);
 }
 
 /* ── Mobile: fullscreen camera ────────────────────── */
@@ -75,9 +75,8 @@
   left: 0;
   right: 0;
   z-index: 10;
-  background: rgba(15, 23, 42, 0.97);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid var(--bs-border-color);
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
   padding: 16px;
   transform: translateY(100%);
   transition: transform 250ms ease;
@@ -98,8 +97,8 @@
 .sidebar {
   width: 56px;
   min-width: 56px;
-  background: #0f172a;
-  border-right: 1px solid var(--bs-border-color);
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -111,7 +110,7 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: #0ea5e9;
+  background: var(--accent);
   color: #fff;
   display: flex;
   align-items: center;
@@ -139,20 +138,20 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0 auto;
   transition: all 120ms ease;
   font-size: 18px;
 }
 
 .sidebar-nav .nav-link:hover {
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  background: var(--bg-panel-raised);
 }
 
 .sidebar-nav .nav-link.active {
-  color: #0ea5e9;
-  background: rgba(14, 165, 233, 0.12);
+  color: var(--accent);
+  background: var(--accent-dim);
 }
 
 /* ── Camera ───────────────────────────────────────── */
@@ -196,7 +195,7 @@
 /* ── Control bar ──────────────────────────────────── */
 
 .control-bar {
-  background: #0f172a;
+  background: var(--bg-panel);
   flex-shrink: 0;
 }
 
@@ -214,9 +213,9 @@
   width: 48px;
   height: 48px;
   border-radius: 10px;
-  border: 1px solid var(--bs-border-color);
-  background: rgba(255, 255, 255, 0.04);
-  color: #94a3b8;
+  border: 1px solid var(--border);
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,9 +226,9 @@
 }
 
 .dpad-btn:hover {
-  background: rgba(14, 165, 233, 0.15);
-  color: #0ea5e9;
-  border-color: rgba(14, 165, 233, 0.3);
+  background: var(--accent-dim);
+  color: var(--accent);
+  border-color: var(--accent-border);
 }
 
 .dpad-btn:active {
@@ -248,9 +247,9 @@
   width: 48px;
   height: 48px;
   border-radius: 10px;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  border: 1px solid var(--status-live-border);
+  background: var(--status-live-dim);
+  color: var(--status-live);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -261,7 +260,7 @@
 
 .dpad-center:hover {
   background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.6);
+  border-color: var(--status-live);
 }
 
 .dpad-label {

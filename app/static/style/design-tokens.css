@@ -28,7 +28,7 @@
 
   --status-live: #ef4444;
   --status-live-dim: rgba(239, 68, 68, 0.12);
-  --status-live-border: rgba(239, 68, 68, 0.3);
+  --status-live-border: rgba(239, 68, 68, 0.4);
 
   --status-inactive: #64748b;
   --status-inactive-dim: rgba(100, 116, 139, 0.12);
@@ -57,7 +57,7 @@
 .theme-light {
   --bg-app: #f1f5f9;
   --bg-panel: #ffffff;
-  --bg-panel-raised: rgba(0, 0, 0, 0.03);
+  --bg-panel-raised: rgba(0, 0, 0, 0.04);
 
   --border: #e2e8f0;
   --border-subtle: rgba(226, 232, 240, 0.5);
@@ -65,6 +65,56 @@
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #94a3b8;
+}
+
+/* ── Light mode: override Bootstrap utility classes ── */
+
+.theme-light .bg-dark {
+  background-color: var(--bg-panel) !important;
+}
+
+.theme-light .bg-dark.bg-opacity-50 {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.theme-light .bg-dark.bg-opacity-75 {
+  background-color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.theme-light .text-muted {
+  color: var(--text-muted) !important;
+}
+
+.theme-light .text-info {
+  color: var(--accent) !important;
+}
+
+.theme-light .text-success {
+  color: var(--status-ok) !important;
+}
+
+.theme-light .border-secondary {
+  border-color: var(--border) !important;
+}
+
+.theme-light .btn-outline-secondary {
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+
+.theme-light .btn-outline-secondary:hover {
+  background-color: var(--bg-panel-raised);
+  color: var(--text-primary);
+}
+
+.theme-light .btn-outline-light {
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+
+.theme-light .btn-outline-light:hover {
+  background-color: var(--bg-panel-raised);
+  color: var(--text-primary);
 }
 
 /* ── Bootstrap overrides ──────────────────────────── */
@@ -89,6 +139,18 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ── Spin animation ───────────────────────────────── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
 }
 
 /* ── Reduced motion ──────────────────────────────── */

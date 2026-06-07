@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/design-tokens.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style/dashboard.css') }}" />
   </head>
   <body class="page-dashboard" data-dashboard-board>
@@ -55,7 +56,7 @@
           <div class="col-lg-7">
             <div class="card h-100">
               <div class="card-body p-0 position-relative camera-stage">
-                <img id="cameraPreviewImg" src="{{ url_for('static', filename='images/camera_fade_frame_save_011.png') }}" alt="Camera preview" class="camera-stage__image" />
+                <img id="cameraPreviewImg" src="{{ url_for('camera.video_feed') }}" alt="Live camera stream" class="camera-stage__image" />
                 <div class="camera-overlay camera-overlay--top">
                   <span class="badge bg-danger bg-opacity-75"><span class="d-inline-block rounded-circle bg-white me-1" style="width:6px;height:6px"></span> Live Stream</span>
                 </div>
@@ -121,6 +122,53 @@
                       <div class="h4 fw-bold mb-0" id="temp">47°C</div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Metrics -->
+          <div class="col-lg-5">
+            <div class="card">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                  <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">System</p>
+                  <h2 class="h6 fw-bold mb-0">Host Metrics</h2>
+                </div>
+                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25" id="systemStatus">
+                  <span class="d-inline-block rounded-circle bg-success me-1" style="width:6px;height:6px"></span> Online
+                </span>
+              </div>
+              <div class="card-body">
+                <div class="row g-2 text-center">
+                  <div class="col-6">
+                    <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
+                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-cpu me-1"></i>CPU</div>
+                      <div class="h5 fw-bold mb-0" id="sysCpu">--%</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
+                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-memory me-1"></i>Memory</div>
+                      <div class="h5 fw-bold mb-0" id="sysMem">--%</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
+                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-hdd me-1"></i>Disk</div>
+                      <div class="h5 fw-bold mb-0" id="sysDisk">--%</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
+                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-thermometer-half me-1"></i>CPU Temp</div>
+                      <div class="h5 fw-bold mb-0" id="sysCpuTemp">--°C</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-2 text-center">
+                  <small class="text-muted">Uptime: </small>
+                  <small class="font-mono" id="sysUptime">--</small>
                 </div>
               </div>
             </div>

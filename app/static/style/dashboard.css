@@ -1,19 +1,19 @@
 /* ── Dashboard Page — Bootstrap + Custom ─────────── */
 
 .page-dashboard {
-  --bs-body-bg: #0a0e17;
-  --bs-body-color: #e2e8f0;
-  --bs-border-color: #1e293b;
-  --bs-secondary-color: #94a3b8;
-  --bs-card-bg: #0f172a;
-  --bs-card-border-color: #1e293b;
-  background: var(--bs-body-bg);
-  color: var(--bs-body-color);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  --bs-body-bg: var(--bg-app);
+  --bs-body-color: var(--text-primary);
+  --bs-border-color: var(--border);
+  --bs-secondary-color: var(--text-secondary);
+  --bs-card-bg: var(--bg-panel);
+  --bs-card-border-color: var(--border);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-family);
 }
 
 .page-dashboard .font-mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-family-mono);
 }
 
 /* ── Sidebar ─────────────────────────────────────── */
@@ -21,8 +21,8 @@
 .sidebar {
   width: 56px;
   min-width: 56px;
-  background: #0f172a;
-  border-right: 1px solid var(--bs-border-color);
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -34,7 +34,7 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: #0ea5e9;
+  background: var(--accent);
   color: #fff;
   display: flex;
   align-items: center;
@@ -62,38 +62,38 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  color: #64748b;
+  color: var(--text-muted);
   margin: 0 auto;
   transition: all 120ms ease;
   font-size: 18px;
 }
 
 .sidebar-nav .nav-link:hover {
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  background: var(--bg-panel-raised);
 }
 
 .sidebar-nav .nav-link.active {
-  color: #0ea5e9;
-  background: rgba(14, 165, 233, 0.12);
+  color: var(--accent);
+  background: var(--accent-dim);
 }
 
 /* ── Cards ────────────────────────────────────────── */
 
 .page-dashboard .card {
-  background: var(--bs-card-bg);
-  border-color: var(--bs-card-border-color);
-  color: var(--bs-body-color);
+  background: var(--bg-panel);
+  border-color: var(--border);
+  color: var(--text-primary);
 }
 
 .page-dashboard .card-header {
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom-color: var(--bs-card-border-color);
+  background: var(--bg-panel-raised);
+  border-bottom-color: var(--border);
 }
 
 .page-dashboard .card-footer {
-  background: rgba(255, 255, 255, 0.02);
-  border-top-color: var(--bs-card-border-color);
+  background: var(--bg-panel-raised);
+  border-top-color: var(--border);
 }
 
 /* ── Camera ───────────────────────────────────────── */
@@ -148,16 +148,16 @@
 .capture-card {
   position: relative;
   border-radius: 8px;
-  border: 1px solid var(--bs-border-color);
+  border: 1px solid var(--border);
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-panel-raised);
   cursor: pointer;
   transition: border-color 150ms ease;
   aspect-ratio: 4 / 3;
 }
 
 .capture-card:hover {
-  border-color: #0ea5e9;
+  border-color: var(--accent);
 }
 
 .capture-card img {
@@ -174,9 +174,9 @@
   right: 0;
   padding: 4px 6px;
   background: linear-gradient(transparent, rgba(0,0,0,0.8));
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-family-mono);
   font-size: 8px;
-  color: #e2e8f0;
+  color: var(--text-primary);
   text-align: right;
 }
 
@@ -189,7 +189,7 @@
 }
 
 .capture-grid::-webkit-scrollbar-thumb {
-  background: var(--bs-border-color);
+  background: var(--border);
   border-radius: 99px;
 }
 
@@ -222,7 +222,7 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #e2e8f0;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/design-tokens.css') }}" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style/sensors.css') }}" />
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   </head>
@@ -33,6 +34,51 @@
 
       <!-- Main -->
       <main class="flex-grow-1 overflow-auto p-3 p-md-4">
+
+        <!-- System Metrics -->
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">System</p>
+              <h2 class="h6 fw-bold mb-0">Host Metrics</h2>
+            </div>
+            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25" id="sysStatusBadge">
+              <span class="d-inline-block rounded-circle bg-success me-1" style="width:6px;height:6px"></span> Live
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="row g-3 text-center">
+              <div class="col-6 col-lg-3">
+                <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
+                  <div class="text-muted text-uppercase mb-1" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-cpu me-1"></i>CPU</div>
+                  <div class="h4 fw-bold font-mono mb-0" id="sysCpuSensors">--%</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
+                  <div class="text-muted text-uppercase mb-1" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-memory me-1"></i>Memory</div>
+                  <div class="h4 fw-bold font-mono mb-0" id="sysMemSensors">--%</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
+                  <div class="text-muted text-uppercase mb-1" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-hdd me-1"></i>Disk</div>
+                  <div class="h4 fw-bold font-mono mb-0" id="sysDiskSensors">--%</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
+                  <div class="text-muted text-uppercase mb-1" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-thermometer-half me-1"></i>CPU Temp</div>
+                  <div class="h4 fw-bold font-mono mb-0" id="sysCpuTempSensors">--°C</div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-2 text-center">
+              <small class="text-muted">Uptime: </small>
+              <small class="font-mono" id="sysUptimeSensors">--</small>
+            </div>
+          </div>
+        </div>
 
         <!-- KPI Cards -->
         <div class="card mb-3">
