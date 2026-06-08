@@ -30,7 +30,9 @@ def create_app():
     CORS(app, supports_credentials=True, origins=[
         "http://localhost:3000",
         "http://192.168.4.100:3000",
+        "http://192.168.4.101:3000",
         "http://192.168.4.108:3000",
+        "http://100.68.175.89:3000",
         "*"
     ])
 

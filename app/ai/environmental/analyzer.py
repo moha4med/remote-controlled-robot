@@ -3,7 +3,7 @@
 
 from .rules import evaluate_environment
 from .scoring import score_environment
-from .trends import analyze_trends
+from .trends import get_temperature_trend, get_humidity_trend
 
 def analyze(temp, humidity):
     # Rule-based classification
