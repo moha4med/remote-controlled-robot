@@ -22,6 +22,7 @@ from app.routes.api.v1.ai import ai_bp
 from app.routes.control import control_bp
 from app.routes.dashboard import dashboard_bp
 from app.routes.sensors import sensors_page_bp
+from app.routes.captures import captures_page_bp
 
 
 def create_app():
@@ -84,6 +85,7 @@ def create_app():
     app.register_blueprint(control_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(sensors_page_bp)
+    app.register_blueprint(captures_page_bp)
 
     with app.app_context():
         db.create_all()
