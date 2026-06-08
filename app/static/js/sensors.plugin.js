@@ -3,10 +3,11 @@
  *
  * Responsibilities:
  * - Load historical sensor data from `/api/v1/history/` on init.
- * - Render live temperature and humidity charts with uPlot.
+ * - Render live temperature and humidity charts with Chart.js.
  * - Prefer Socket.IO updates when available.
  * - Fall back to polling `/api/v1/sensors/`.
  * - Animate numeric value transitions.
+ * - Support real-time and hourly aggregated chart views.
  *
  * State is stored with `$.data()` for lightweight lifecycle management.
  */
@@ -20,7 +21,9 @@
     sensorsUrl: "/api/v1/sensors/",
     logsUrl: "/api/v1/history/",
     hourlyUrl: "/api/v1/history/hourly",
+    systemMetricsUrl: "/api/v1/system/metrics",
     pollIntervalMs: 2500,
+    systemMetricsPollMs: 5000,
     points: 48,
     hourlyHours: 24,
     socketEnabled: true,
@@ -35,17 +38,6 @@
   function getToken(name, fallback) {
     var value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     return value || fallback;
-  }
-
-  function colorToRgba(color, alpha) {
-    var probe = document.createElement("span");
-    probe.style.color = color;
-    document.body.appendChild(probe);
-    var computed = window.getComputedStyle(probe).color;
-    document.body.removeChild(probe);
-    var parts = computed.match(/\d+(\.\d+)?/g);
-    if (!parts || parts.length < 3) return "rgba(20, 184, 166, " + alpha + ")";
-    return "rgba(" + parts[0] + ", " + parts[1] + ", " + parts[2] + ", " + alpha + ")";
   }
 
   function coerceNumber(value) {
@@ -70,10 +62,14 @@
     };
   }
 
-  function buildHistory(values, length) {
-    var h = values.slice(Math.max(values.length - length, 0));
-    while (h.length < length) h.unshift(null);
-    return h;
+  function formatUptime(seconds) {
+    if (!seconds || seconds < 0) return "--";
+    var d = Math.floor(seconds / 86400);
+    var h = Math.floor((seconds % 86400) / 3600);
+    var m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return d + "d " + h + "h " + m + "m";
+    if (h > 0) return h + "h " + m + "m";
+    return m + "m";
   }
 
   /* ── Plugin ──────────────────────────────────────── */
@@ -99,13 +95,19 @@
     this.$sysUptime = this.$root.find("#sysUptimeSensors");
     this.$sysStatus = this.$root.find("#sysStatusBadge");
 
+    // Chart title/badge elements
+    this.$tempTitle = this.$root.find("#tempChartTitle");
+    this.$humidityTitle = this.$root.find("#humidityChartTitle");
+    this.$tempBadge = this.$root.find("#tempChartBadge");
+    this.$humidityBadge = this.$root.find("#humidityChartBadge");
+
     this.pollTimer = null;
     this.hourlyPollTimer = null;
+    this.systemMetricsTimer = null;
     this.socketFallbackTimer = null;
     this.socket = null;
     this.usingSocket = false;
-    this.charts = {};
-    this.hourlyCharts = {};
+    this.chartInstances = {};
     this.history = {
       temp: [],
       humidity: [],
@@ -115,11 +117,16 @@
       humidity: [],
       labels: [],
     };
-    this.viewMode = "realtime"; // "realtime" or "hourly"
+    this.viewMode = "realtime";
+
+    // Colors
     this.palette = {
-      temp: getToken("--color-danger", getToken("--accent", "#14b8a6")),
-      humidity: getToken("--color-info", getToken("--accent", "#38bdf8")),
-      textSecondary: getToken("--color-text-secondary", "#94a3b8"),
+      temp: getToken("--color-danger", "#ef4444"),
+      tempFill: "rgba(239, 68, 68, 0.15)",
+      humidity: getToken("--color-info", "#3b82f6"),
+      humidityFill: "rgba(59, 130, 246, 0.15)",
+      grid: getToken("--color-border-subtle", "rgba(148, 163, 184, 0.15)"),
+      text: getToken("--color-text-muted", "#94a3b8"),
     };
   }
 
@@ -127,17 +134,15 @@
     var self = this;
     this.$root.attr("aria-busy", "true");
 
-    // Load historical data first, then create charts
     this.loadHistory(function () {
-      $.each(self.$charts, function (key, $canvas) {
-        if ($canvas.length && window.uPlot) {
-          self.charts[key] = self.createChart($canvas[0], key);
-        }
-      });
-      self.bindResize();
+      self.createCharts();
       self.connectSocket();
       self.refresh();
       self.startPolling();
+      self.refreshSystemMetrics();
+      self.systemMetricsTimer = window.setInterval(function () {
+        self.refreshSystemMetrics();
+      }, self.options.systemMetricsPollMs);
       self.$root.attr("aria-busy", "false");
     });
   };
@@ -149,24 +154,17 @@
     $.getJSON(this.options.logsUrl)
       .done(function (logs) {
         if (!logs || !logs.length) {
-          // Fall back to empty history
           self.history.temp = [];
           self.history.humidity = [];
           if (callback) callback();
           return;
         }
-        // Extract temp and humidity arrays
         self.history.temp = [];
         self.history.humidity = [];
         $.each(logs, function (_, entry) {
-          if (entry.temperature !== null && entry.temperature !== undefined) {
-            self.history.temp.push(entry.temperature);
-          }
-          if (entry.humidity !== null && entry.humidity !== undefined) {
-            self.history.humidity.push(entry.humidity);
-          }
+          self.history.temp.push(coerceNumber(entry.temperature));
+          self.history.humidity.push(coerceNumber(entry.humidity));
         });
-        // Trim to max points
         self.history.temp = self.history.temp.slice(-self.options.points);
         self.history.humidity = self.history.humidity.slice(-self.options.points);
         if (callback) callback();
@@ -178,62 +176,277 @@
       });
   };
 
-  /* ── Chart Setup ─────────────────────────────────── */
+  /* ── Chart.js Setup ──────────────────────────────── */
 
-  SensorDashboard.prototype.createChart = function (container, key) {
-    var values = this.history[key].length
-      ? this.history[key].slice(0)
-      : new Array(this.options.points).fill(null);
-    while (values.length < this.options.points) values.unshift(null);
+  SensorDashboard.prototype.getChartConfig = function (key, labels, data, isHourly) {
+    var colors = this.palette;
+    var color = key === "temp" ? colors.temp : colors.humidity;
+    var fillColor = key === "temp" ? colors.tempFill : colors.humidityFill;
+    var axisLabel = key === "temp" ? "Temperature (°C)" : "Humidity (%)";
+    var yUnit = key === "temp" ? "°C" : "%";
+    var xLabel = isHourly ? "Hour" : "Sample";
+    var tooltipTitle = key === "temp" ? "Temperature" : "Humidity";
 
-    var xData = this.getXData(values);
-    var seriesColor = this.palette[key];
-    var fillColor = colorToRgba(seriesColor, 0.18);
-    var gridColor = colorToRgba(this.palette.textSecondary, 0.16);
-
-    return new window.uPlot({
-      width: container.clientWidth || 520,
-      height: container.clientHeight || 220,
-      class: "sensor-uplot",
-      legend: { show: false },
-      cursor: { show: false },
-      scales: { x: { time: false }, y: { auto: true } },
-      series: [
-        { label: "sample" },
-        {
-          label: key,
-          stroke: seriesColor,
-          fill: fillColor,
-          width: 2,
+    return {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: axisLabel,
+          data: data,
+          borderColor: color,
+          backgroundColor: fillColor,
+          borderWidth: 2,
+          pointRadius: isHourly ? 3 : 0,
+          pointHoverRadius: 6,
+          pointBackgroundColor: color,
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+          fill: true,
+          tension: 0.35,
           spanGaps: true,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 300 },
+        interaction: {
+          intersect: false,
+          mode: "index",
         },
-      ],
-      axes: [
-        { show: false, grid: { show: false } },
-        { show: false, grid: { stroke: gridColor } },
-      ],
-    }, [xData, values], container);
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+            align: "end",
+            labels: {
+              color: colors.text,
+              font: { size: 10, family: "'DM Sans', sans-serif", weight: "500" },
+              boxWidth: 12,
+              boxHeight: 3,
+              borderRadius: 2,
+              usePointStyle: true,
+              pointStyle: "line",
+              padding: 8,
+            },
+          },
+          tooltip: {
+            backgroundColor: getToken("--color-bg-panel-raised", "#1e293b"),
+            titleColor: getToken("--color-text-primary", "#e2e8f0"),
+            bodyColor: getToken("--color-text-secondary", "#cbd5e1"),
+            footerColor: getToken("--color-text-muted", "#94a3b8"),
+            borderColor: getToken("--color-border-subtle", "#334155"),
+            borderWidth: 1,
+            cornerRadius: 8,
+            padding: { top: 8, bottom: 8, left: 12, right: 12 },
+            titleFont: { size: 11, family: "'DM Sans', sans-serif", weight: "600" },
+            bodyFont: { size: 12, family: "'JetBrains Mono', monospace", weight: "500" },
+            footerFont: { size: 9, family: "'DM Sans', sans-serif" },
+            displayColors: false,
+            callbacks: {
+              title: function (ctx) {
+                if (!ctx.length) return "";
+                var lbl = ctx[0].label;
+                return isHourly ? "Hour: " + lbl : "Sample #" + lbl;
+              },
+              label: function (ctx) {
+                if (ctx.parsed.y === null) return tooltipTitle + ": No data";
+                return tooltipTitle + ": " + ctx.parsed.y.toFixed(1) + yUnit;
+              },
+              footer: function (ctx) {
+                if (!ctx.length) return "";
+                var val = ctx[0].parsed.y;
+                if (val === null) return "";
+                if (key === "temp") {
+                  if (val > 40) return "⚠ High temperature";
+                  if (val < 10) return "⚠ Low temperature";
+                  return "✓ Normal range";
+                } else {
+                  if (val > 80) return "⚠ High humidity";
+                  if (val < 20) return "⚠ Low humidity";
+                  return "✓ Normal range";
+                }
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: xLabel,
+              color: colors.text,
+              font: { size: 10, family: "'DM Sans', sans-serif", weight: "600" },
+              padding: { top: 8 },
+            },
+            grid: { color: colors.grid, drawBorder: false },
+            ticks: {
+              color: colors.text,
+              font: { size: 9, family: "'JetBrains Mono', monospace" },
+              maxTicksLimit: isHourly ? 12 : 8,
+              maxRotation: 0,
+            },
+          },
+          y: {
+            title: {
+              display: true,
+              text: axisLabel,
+              color: colors.text,
+              font: { size: 10, family: "'DM Sans', sans-serif", weight: "600" },
+              padding: { bottom: 8 },
+            },
+            grid: { color: colors.grid, drawBorder: false },
+            ticks: {
+              color: colors.text,
+              font: { size: 9, family: "'JetBrains Mono', monospace" },
+              callback: function (val) { return val + yUnit; },
+            },
+            beginAtZero: false,
+          },
+        },
+      },
+    };
   };
 
-  SensorDashboard.prototype.getXData = function (values) {
-    return values.map(function (_, i) { return i + 1; });
-  };
-
-  SensorDashboard.prototype.resizeCharts = function () {
+  SensorDashboard.prototype.createCharts = function () {
     var self = this;
-    $.each(this.charts, function (key, chart) {
-      var container = chart && chart.root && chart.root.parentNode;
-      if (!container) return;
-      chart.setSize({
-        width: container.clientWidth || 520,
-        height: container.clientHeight || 220,
-      });
+
+    // Replace div containers with canvas elements
+    $.each(this.$charts, function (key, $container) {
+      if (!$container.length) return;
+      var $canvas = $("<canvas></canvas>");
+      $container.empty().append($canvas);
+      self.$charts[key] = $canvas;
+    });
+
+    var tempCtx = this.$charts.temp[0];
+    var humidityCtx = this.$charts.humidity[0];
+
+    if (!tempCtx || !humidityCtx) return;
+
+    // Build labels for real-time (sample indices)
+    var rtLabels = this.history.temp.map(function (_, i) { return i + 1; });
+
+    // Temperature chart
+    this.chartInstances.temp = new window.Chart(tempCtx, this.getChartConfig(
+      "temp", rtLabels, this.history.temp.slice(), false
+    ));
+
+    // Humidity chart
+    this.chartInstances.humidity = new window.Chart(humidityCtx, this.getChartConfig(
+      "humidity", rtLabels, this.history.humidity.slice(), false
+    ));
+  };
+
+  SensorDashboard.prototype.updateCharts = function () {
+    var self = this;
+    var rtLabels = this.history.temp.map(function (_, i) { return i + 1; });
+
+    $.each(this.chartInstances, function (key, chart) {
+      if (!chart) return;
+      chart.data.labels = rtLabels;
+      chart.data.datasets[0].data = self.history[key].slice();
+      chart.update("none");
     });
   };
 
-  SensorDashboard.prototype.bindResize = function () {
+  /* ── Hourly Data Loading ─────────────────────────── */
+
+  SensorDashboard.prototype.loadHourlyData = function (callback) {
     var self = this;
-    $(window).on("resize" + EVENT_NS, function () { self.resizeCharts(); });
+    $.getJSON(this.options.hourlyUrl, { hours: this.options.hourlyHours })
+      .done(function (data) {
+        if (!data || !data.length) {
+          self.hourlyData = { temp: [], humidity: [], labels: [] };
+          if (callback) callback();
+          return;
+        }
+        self.hourlyData.labels = [];
+        self.hourlyData.temp = [];
+        self.hourlyData.humidity = [];
+        $.each(data, function (_, entry) {
+          // "2024-01-01 14:00:00" → "14:00"
+          var label = entry.hour ? (entry.hour.split(" ")[1] || "").slice(0, 5) || entry.hour : "";
+          self.hourlyData.labels.push(label);
+          self.hourlyData.temp.push(coerceNumber(entry.temperature));
+          self.hourlyData.humidity.push(coerceNumber(entry.humidity));
+        });
+        if (callback) callback();
+      })
+      .fail(function () {
+        self.hourlyData = { temp: [], humidity: [], labels: [] };
+        if (callback) callback();
+      });
+  };
+
+  /* ── View Mode Toggle ────────────────────────────── */
+
+  SensorDashboard.prototype.switchView = function (mode) {
+    var self = this;
+    this.viewMode = mode;
+
+    // Update titles and badges
+    if (mode === "hourly") {
+      if (this.$tempTitle.length) this.$tempTitle.text("Thermal Trend (Hourly Avg)");
+      if (this.$humidityTitle.length) this.$humidityTitle.text("Humidity Trend (Hourly Avg)");
+      if (this.$tempBadge.length) this.$tempBadge.text("Hourly").removeClass("bg-success").addClass("bg-info");
+      if (this.$humidityBadge.length) this.$humidityBadge.text("Hourly").removeClass("bg-success").addClass("bg-info");
+    } else {
+      if (this.$tempTitle.length) this.$tempTitle.text("Thermal Trend");
+      if (this.$humidityTitle.length) this.$humidityTitle.text("Humidity Trend");
+      if (this.$tempBadge.length) this.$tempBadge.text("Live").removeClass("bg-info").addClass("bg-success");
+      if (this.$humidityBadge.length) this.$humidityBadge.text("Live").removeClass("bg-info").addClass("bg-success");
+    }
+
+    if (mode === "hourly") {
+      this.loadHourlyData(function () {
+        $.each(self.chartInstances, function (key, chart) {
+          if (!chart) return;
+          chart.data.labels = self.hourlyData.labels.slice();
+          chart.data.datasets[0].data = self.hourlyData[key].slice();
+          chart.data.datasets[0].pointRadius = 3;
+          chart.update();
+        });
+      });
+    } else {
+      var rtLabels = this.history.temp.map(function (_, i) { return i + 1; });
+      $.each(this.chartInstances, function (key, chart) {
+        if (!chart) return;
+        chart.data.labels = rtLabels;
+        chart.data.datasets[0].data = self.history[key].slice();
+        chart.data.datasets[0].pointRadius = 0;
+        chart.update();
+      });
+    }
+  };
+
+  SensorDashboard.prototype.startHourlyPolling = function () {
+    var self = this;
+    if (this.hourlyPollTimer) return;
+    this.hourlyPollTimer = window.setInterval(function () {
+      if (self.viewMode === "hourly") {
+        self.loadHourlyData(function () {
+          $.each(self.chartInstances, function (key, chart) {
+            if (!chart) return;
+            chart.data.labels = self.hourlyData.labels.slice();
+            chart.data.datasets[0].data = self.hourlyData[key].slice();
+            chart.update("none");
+          });
+        });
+      }
+    }, 60000);
+  };
+
+  /* ── System Metrics Polling ──────────────────────── */
+
+  SensorDashboard.prototype.refreshSystemMetrics = function () {
+    var self = this;
+    $.getJSON(this.options.systemMetricsUrl)
+      .done(function (data) {
+        self.updateSystemMetrics(data);
+      });
+    return this;
   };
 
   /* ── Socket.IO ───────────────────────────────────── */
@@ -278,7 +491,6 @@
       }
     });
 
-    // System metrics via SocketIO
     this.socket.on("system:update", function (data) {
       self.updateSystemMetrics(data);
     });
@@ -302,15 +514,14 @@
     if (number === null) return this;
     this.history[key].push(number);
     this.history[key] = this.history[key].slice(-this.options.points);
-    if (this.charts[key]) {
-      var values = this.history[key].slice(0);
-      var xData = this.getXData(values);
-      // Pad with nulls at the front if needed
-      while (values.length < this.options.points) {
-        values.unshift(null);
-        xData.unshift(xData[0] ? xData[0] - 1 : 0);
-      }
-      this.charts[key].setData([xData, values]);
+
+    // Only update chart in realtime mode
+    if (this.viewMode === "realtime" && this.chartInstances[key]) {
+      var chart = this.chartInstances[key];
+      var rtLabels = this.history.temp.map(function (_, i) { return i + 1; });
+      chart.data.labels = rtLabels;
+      chart.data.datasets[0].data = this.history[key].slice();
+      chart.update("none");
     }
     return this;
   };
@@ -346,14 +557,10 @@
       this.$sysDisk.text(Number(data.disk_usage).toFixed(0) + "%");
     }
     if (data.cpu_temperature !== undefined && this.$sysCpuTemp.length) {
-      this.$sysCpuTemp.text(data.cpu_temperature + "\u00b0C");
+      this.$sysCpuTemp.text(Number(data.cpu_temperature).toFixed(0) + "\u00b0C");
     }
     if (data.uptime !== undefined && this.$sysUptime.length) {
-      var s = data.uptime;
-      var d = Math.floor(s / 86400);
-      var h = Math.floor((s % 86400) / 3600);
-      var m = Math.floor((s % 3600) / 60);
-      this.$sysUptime.text(d > 0 ? d + "d " + h + "h " + m + "m" : h > 0 ? h + "h " + m + "m" : m + "m");
+      this.$sysUptime.text(formatUptime(data.uptime));
     }
     if (this.$sysStatus.length) {
       this.$sysStatus
@@ -384,145 +591,7 @@
     }
   };
 
-  /* ── Hourly Data Loading ─────────────────────────── */
-
-  SensorDashboard.prototype.loadHourlyData = function (callback) {
-    var self = this;
-    $.getJSON(this.options.hourlyUrl, { hours: this.options.hourlyHours })
-      .done(function (data) {
-        if (!data || !data.length) {
-          self.hourlyData = { temp: [], humidity: [], labels: [] };
-          if (callback) callback();
-          return;
-        }
-        self.hourlyData.labels = [];
-        self.hourlyData.temp = [];
-        self.hourlyData.humidity = [];
-        $.each(data, function (_, entry) {
-          // Format hour label: "2024-01-01 14:00:00" → "14:00"
-          var label = entry.hour ? entry.hour.split(" ")[1]?.slice(0, 5) || entry.hour : "";
-          self.hourlyData.labels.push(label);
-          self.hourlyData.temp.push(coerceNumber(entry.temperature));
-          self.hourlyData.humidity.push(coerceNumber(entry.humidity));
-        });
-        if (callback) callback();
-      })
-      .fail(function () {
-        self.hourlyData = { temp: [], humidity: [], labels: [] };
-        if (callback) callback();
-      });
-  };
-
-  /* ── Hourly Chart Creation ───────────────────────── */
-
-  SensorDashboard.prototype.createHourlyChart = function (container, key) {
-    var values = this.hourlyData[key].length
-      ? this.hourlyData[key].slice(0)
-      : [null];
-    var labels = this.hourlyData.labels.length
-      ? this.hourlyData.labels.slice(0)
-      : [""];
-
-    var seriesColor = this.palette[key];
-    var fillColor = colorToRgba(seriesColor, 0.18);
-    var gridColor = colorToRgba(this.palette.textSecondary, 0.16);
-
-    // Destroy existing hourly chart if present
-    if (this.hourlyCharts[key] && typeof this.hourlyCharts[key].destroy === "function") {
-      this.hourlyCharts[key].destroy();
-    }
-
-    this.hourlyCharts[key] = new window.uPlot({
-      width: container.clientWidth || 520,
-      height: container.clientHeight || 220,
-      class: "sensor-uplot",
-      legend: { show: false },
-      cursor: { show: false },
-      scales: { x: { time: false }, y: { auto: true } },
-      series: [
-        { label: "Hour" },
-        {
-          label: key,
-          stroke: seriesColor,
-          fill: fillColor,
-          width: 2,
-          spanGaps: true,
-        },
-      ],
-      axes: [
-        {
-          show: true,
-          grid: { show: false },
-          values: function (self, splits) {
-            return splits.map(function (v, i) {
-              return labels[i] || "";
-            });
-          },
-          stroke: gridColor,
-          font: "9px DM Sans",
-          size: 28,
-        },
-        { show: false, grid: { stroke: gridColor } },
-      ],
-    }, [labels, values], container);
-
-    return this.hourlyCharts[key];
-  };
-
-  /* ── View Mode Toggle ────────────────────────────── */
-
-  SensorDashboard.prototype.switchView = function (mode) {
-    var self = this;
-    this.viewMode = mode;
-
-    if (mode === "hourly") {
-      // Load hourly data and create hourly charts
-      this.loadHourlyData(function () {
-        $.each(self.$charts, function (key, $canvas) {
-          if ($canvas.length && window.uPlot) {
-            // Destroy realtime chart
-            if (self.charts[key] && typeof self.charts[key].destroy === "function") {
-              self.charts[key].destroy();
-              self.charts[key] = null;
-            }
-            // Create hourly chart
-            if (self.hourlyData[key].length) {
-              self.createHourlyChart($canvas[0], key);
-            }
-          }
-        });
-        self.resizeCharts();
-      });
-    } else {
-      // Switch back to realtime — recreate realtime charts
-      $.each(this.$charts, function (key, $canvas) {
-        if ($canvas.length && window.uPlot) {
-          if (self.hourlyCharts[key] && typeof self.hourlyCharts[key].destroy === "function") {
-            self.hourlyCharts[key].destroy();
-            self.hourlyCharts[key] = null;
-          }
-          self.charts[key] = self.createChart($canvas[0], key);
-        }
-      });
-      self.resizeCharts();
-    }
-  };
-
-  SensorDashboard.prototype.startHourlyPolling = function () {
-    var self = this;
-    if (this.hourlyPollTimer) return;
-    this.hourlyPollTimer = window.setInterval(function () {
-      if (self.viewMode === "hourly") {
-        self.loadHourlyData(function () {
-          $.each(self.hourlyCharts, function (key, chart) {
-            if (chart && self.hourlyData.labels.length) {
-              chart.setData([self.hourlyData.labels, self.hourlyData[key]]);
-            }
-          });
-        });
-      }
-    }, 60000);
-  };
+  /* ── Lifecycle ───────────────────────────────────── */
 
   SensorDashboard.prototype.destroy = function () {
     this.stopPolling();
@@ -530,16 +599,17 @@
       window.clearInterval(this.hourlyPollTimer);
       this.hourlyPollTimer = null;
     }
+    if (this.systemMetricsTimer) {
+      window.clearInterval(this.systemMetricsTimer);
+      this.systemMetricsTimer = null;
+    }
     this.clearSocketFallback();
     $(window).off(EVENT_NS);
     if (this.socket && typeof this.socket.disconnect === "function") {
       this.socket.disconnect();
       this.socket = null;
     }
-    $.each(this.charts, function (_, chart) {
-      if (chart && typeof chart.destroy === "function") chart.destroy();
-    });
-    $.each(this.hourlyCharts, function (_, chart) {
+    $.each(this.chartInstances, function (_, chart) {
       if (chart && typeof chart.destroy === "function") chart.destroy();
     });
     this.$root.removeData(DATA_KEY);
