@@ -255,26 +255,30 @@
 
     if (sensorData) {
       if (sensorData.temperature !== undefined) {
-        animateValue(this.$temp, sensorData.temperature, "\u00b0C");
-        updateText(this.$tempMobile, (sensorData.temperature !== null ? sensorData.temperature : "--") + "\u00b0C");
+        var tempVal = sensorData.temperature !== null ? sensorData.temperature.toFixed(1) + "\u00b0C" : "--\u00b0C";
+        this.$temp.find(".cam-val").text(tempVal);
+        updateText(this.$tempMobile, tempVal);
       }
       if (sensorData.humidity !== undefined) {
-        animateValue(this.$humidity, sensorData.humidity, "%");
-        updateText(this.$humidityMobile, (sensorData.humidity !== null ? sensorData.humidity : "--") + "%");
+        var humVal = sensorData.humidity !== null ? sensorData.humidity.toFixed(1) + "%" : "--%";
+        this.$humidity.find(".cam-val").text(humVal);
+        updateText(this.$humidityMobile, humVal);
       }
     }
 
     if (statusData) {
       if (statusData.battery !== undefined) {
-        animateValue(this.$battery, statusData.battery, "%");
+        var battVal = statusData.battery + "%";
+        this.$battery.find(".cam-val").text(battVal);
         animateValue(this.$batteryValue, statusData.battery, "%");
-        updateText(this.$batteryMobile, statusData.battery + "%");
+        updateText(this.$batteryMobile, battVal);
         updateBatteryBars(this.$batteryBars, statusData.battery);
       }
       if (statusData.signal !== undefined) {
-        animateValue(this.$signal, statusData.signal, "%");
+        var sigVal = statusData.signal + "%";
+        this.$signal.find(".cam-val").text(sigVal);
         animateValue(this.$signalValue, statusData.signal, "%");
-        updateText(this.$signalMobile, statusData.signal + "%");
+        updateText(this.$signalMobile, sigVal);
       }
       if (statusData.state !== undefined) {
         updateText(this.$robotState, statusData.state);

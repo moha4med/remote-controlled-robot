@@ -192,6 +192,28 @@
   flex-wrap: wrap;
 }
 
+/* ── Camera bottom bar metric badges ──────────────── */
+
+.camera-overlay--bottom .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+}
+
+.camera-overlay--bottom .badge i {
+  font-size: 12px;
+}
+
+.camera-overlay--bottom .badge .cam-val {
+  font-family: var(--font-family-mono);
+  font-weight: 700;
+}
+
 /* ── Control bar ──────────────────────────────────── */
 
 .control-bar {

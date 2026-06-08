@@ -120,10 +120,10 @@
             <button class="btn btn-sm btn-info" id="btnCaptureControl" type="button">
               <i class="bi bi-camera-fill me-1"></i> Capture
             </button>
-            <span class="badge bg-dark bg-opacity-75" id="topTemp">--°C <i class="bi bi-thermometer"></i></span>
-            <span class="badge bg-dark bg-opacity-75" id="topHumidity">--% <i class="bi bi-droplet"></i></span>
-            <span class="badge bg-dark bg-opacity-75" id="topBattery">--% <i class="bi bi-battery"></i></span>
-            <span class="badge bg-dark bg-opacity-75" id="topSignal">--% <i class="bi bi-wifi"></i></span>
+            <span class="badge bg-dark bg-opacity-75" id="topTemp"><i class="bi bi-thermometer-half me-1"></i><span class="cam-val">--°C</span></span>
+            <span class="badge bg-dark bg-opacity-75" id="topHumidity"><i class="bi bi-droplet-fill me-1"></i><span class="cam-val">--%</span></span>
+            <span class="badge bg-dark bg-opacity-75" id="topBattery"><i class="bi bi-battery-charging me-1"></i><span class="cam-val">--%</span></span>
+            <span class="badge bg-dark bg-opacity-75" id="topSignal"><i class="bi bi-wifi me-1"></i><span class="cam-val">--%</span></span>
           </div>
         </div>
 
@@ -149,12 +149,6 @@
                 <div>
                   <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Battery</div>
                   <div class="fw-bold" id="battery-value">75%</div>
-                  <div class="battery-bars" id="battery-bars">
-                    <span class="battery-bar"></span><span class="battery-bar"></span><span class="battery-bar"></span>
-                    <span class="battery-bar"></span><span class="battery-bar"></span><span class="battery-bar"></span>
-                    <span class="battery-bar"></span><span class="battery-bar"></span><span class="battery-bar"></span>
-                    <span class="battery-bar"></span><span class="battery-bar"></span>
-                  </div>
                 </div>
                 <div>
                   <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Signal</div>
