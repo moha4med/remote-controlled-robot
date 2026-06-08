@@ -57,7 +57,7 @@
       <!-- Content Grid -->
       <div class="dashboard-grid">
 
-        <!-- Camera Feed (Large) -->
+        <!-- Camera Feed (2/3 width) -->
         <section class="dashboard-card dashboard-card--camera">
           <div class="dashboard-card__header">
             <div class="d-flex align-items-center gap-2">
@@ -100,6 +100,11 @@
               <span class="camera-metric__label">Temp</span>
             </div>
             <div class="camera-metric">
+              <i class="bi bi-droplet-fill camera-metric__icon"></i>
+              <span class="camera-metric__value" id="humidity">--%</span>
+              <span class="camera-metric__label">Humidity</span>
+            </div>
+            <div class="camera-metric">
               <i class="bi bi-image camera-metric__icon"></i>
               <span class="camera-metric__value" id="captureCount">0</span>
               <span class="camera-metric__label">Captures</span>
@@ -140,6 +145,14 @@
                 <span class="telemetry-item__value" id="tempTel">47°C</span>
               </div>
               <div class="telemetry-item__bar"><div class="telemetry-item__bar-fill" style="width:47%"></div></div>
+            </div>
+            <div class="telemetry-item">
+              <div class="telemetry-item__icon"><i class="bi bi-droplet-fill"></i></div>
+              <div class="telemetry-item__body">
+                <span class="telemetry-item__label">Humidity</span>
+                <span class="telemetry-item__value" id="humidityTel">--%</span>
+              </div>
+              <div class="telemetry-item__bar"><div class="telemetry-item__bar-fill" id="humidityBarFill" style="width:0%"></div></div>
             </div>
             <div class="telemetry-item">
               <div class="telemetry-item__icon"><i class="bi bi-gear"></i></div>

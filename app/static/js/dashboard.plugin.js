@@ -15,6 +15,7 @@
 
   var DEFAULTS = {
     statusUrl: "/api/v1/status",
+    sensorsUrl: "/api/v1/sensors/",
     systemMetricsUrl: "/api/v1/system/metrics",
     eventsUrl: "/api/v1/events",
     capturesUrl: "/api/v1/captures/",
@@ -79,6 +80,8 @@
     this.$battery = this.$root.find("#batteryValue, #batteryValueTel");
     this.$signal = this.$root.find("#signal, #signalTel");
     this.$temp = this.$root.find("#temp, #tempTel");
+    this.$humidity = this.$root.find("#humidity, #humidityTel");
+    this.$humidityBar = this.$root.find("#humidityBarFill");
     this.$mode = this.$root.find("#modeValue");
     this.$timestamp = this.$root.find("#dashboardTimestamp, #camTime");
 
@@ -227,30 +230,49 @@
 
   DashboardBoard.prototype.refresh = function () {
     var self = this;
-    $.getJSON(this.options.statusUrl)
-      .done(function (data) {
-        self.updateStatus(data);
+    $.when(
+      $.getJSON(this.options.statusUrl),
+      $.getJSON(this.options.sensorsUrl)
+    )
+      .done(function (statusResponse, sensorsResponse) {
+        var status = statusResponse[0] || statusResponse;
+        var sensors = sensorsResponse[0] || sensorsResponse;
+        self.updateStatus(status, sensors);
       })
       .fail(function () {
-        self.$root.attr("aria-busy", "false");
+        $.getJSON(self.options.statusUrl)
+          .done(function (status) { self.updateStatus(status, null); })
+          .fail(function () { self.$root.attr("aria-busy", "false"); });
+        $.getJSON(self.options.sensorsUrl)
+          .done(function (sensors) { self.updateStatus(null, sensors); })
+          .fail(function () {});
       });
     return this;
   };
 
-  DashboardBoard.prototype.updateStatus = function (data) {
-    if (!data) return this;
-
-    if (data.battery !== undefined) {
-      animateValue(this.$battery, data.battery, "%");
+  DashboardBoard.prototype.updateStatus = function (statusData, sensorData) {
+    if (statusData) {
+      if (statusData.battery !== undefined) {
+        animateValue(this.$battery, statusData.battery, "%");
+      }
+      if (statusData.signal !== undefined) {
+        animateValue(this.$signal, statusData.signal, "%");
+      }
+      if (statusData.mode !== undefined) {
+        this.$mode.text(statusData.mode);
+      }
+      if (statusData.temp !== undefined) {
+        this.$temp.text(statusData.temp + "\u00b0C");
+      }
     }
-    if (data.signal !== undefined) {
-      animateValue(this.$signal, data.signal, "%");
-    }
-    if (data.mode !== undefined) {
-      this.$mode.text(data.mode);
-    }
-    if (data.temp !== undefined) {
-      this.$temp.text(data.temp + "\u00b0C");
+    if (sensorData) {
+      var humidity = coerceNumber(sensorData.humidity !== undefined ? sensorData.humidity : null);
+      if (humidity !== null) {
+        this.$humidity.text(humidity.toFixed(0) + "%");
+        if (this.$humidityBar.length) {
+          this.$humidityBar.css("width", Math.min(humidity, 100) + "%");
+        }
+      }
     }
     var timeStr = new Date().toLocaleTimeString();
     this.$timestamp.text(timeStr);
