@@ -3,6 +3,7 @@ $(function () {
   var $dashboard = $("[data-dashboard-board]");
   var $control = $("[data-control-surface]");
   var $sensors = $("[data-sensors-dashboard]");
+  var $captures = $("[data-captures-page]");
 
   if ($dashboard.length) {
     $dashboard.robotDashboardBoard();
@@ -13,8 +14,11 @@ $(function () {
   if ($sensors.length) {
     $sensors.robotSensorsDashboard();
   }
+  if ($captures.length) {
+    $captures.capturesGallery();
+  }
 
-  // Chart view toggle (Real-time / Hourly)
+  // Chart view toggle (Real-time / Hourly) — sensors page
   var $viewToggle = $("#chartViewToggle");
   var $hourlyRange = $("#hourlyRange");
   var $rangeButtons = $hourlyRange.find("button");
@@ -23,19 +27,13 @@ $(function () {
     $viewToggle.on("click", "button", function () {
       var $btn = $(this);
       var view = $btn.data("view");
-
-      // Update active state
       $viewToggle.find("button").removeClass("active");
       $btn.addClass("active");
-
-      // Show/hide hourly range selector
       if (view === "hourly") {
         $hourlyRange.show();
       } else {
         $hourlyRange.hide();
       }
-
-      // Switch the sensor dashboard view
       if ($sensors.length) {
         $sensors.robotSensorsDashboard("switchView", view);
         $sensors.robotSensorsDashboard("startHourlyPolling");
@@ -47,18 +45,28 @@ $(function () {
     $rangeButtons.on("click", function () {
       var $btn = $(this);
       var hours = $btn.data("hours");
-
-      // Update active state
       $rangeButtons.removeClass("btn-secondary").addClass("btn-outline-secondary");
       $btn.removeClass("btn-outline-secondary").addClass("btn-secondary");
-
-      // Update the plugin's hourly range and reload
       if ($sensors.length) {
         var instance = $sensors.data("robotSensorsDashboard");
         if (instance) {
           instance.options.hourlyHours = hours;
           $sensors.robotSensorsDashboard("switchView", "hourly");
         }
+      }
+    });
+  }
+
+  // Fullscreen toggle
+  var $fullscreenBtns = $("[data-fullscreen-toggle]");
+  if ($fullscreenBtns.length) {
+    $fullscreenBtns.on("click", function () {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(function () {});
+        $(this).find("i").removeClass("bi-arrows-fullscreen").addClass("bi-fullscreen-exit");
+      } else {
+        document.exitFullscreen().catch(function () {});
+        $(this).find("i").removeClass("bi-fullscreen-exit").addClass("bi-arrows-fullscreen");
       }
     });
   }

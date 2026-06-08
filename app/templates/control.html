@@ -92,8 +92,12 @@
           <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard.index') }}" aria-label="Dashboard"><i class="bi bi-activity"></i></a></li>
           <li class="nav-item"><a class="nav-link active" href="{{ url_for('control.index') }}" aria-label="Control"><i class="bi bi-sliders"></i></a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('sensors.index') }}" aria-label="Sensors"><i class="bi bi-bar-chart"></i></a></li>
+          <li class="nav-item"><a class="nav-link" href="{{ url_for('captures.index') }}" aria-label="Captures"><i class="bi bi-camera"></i></a></li>
         </ul>
-        <div class="mt-auto">
+        <div class="mt-auto d-flex flex-column gap-2">
+          <button class="btn btn-outline-secondary btn-sm rounded-2" type="button" data-fullscreen-toggle aria-label="Toggle fullscreen">
+            <i class="bi bi-arrows-fullscreen"></i>
+          </button>
           <button class="btn btn-outline-secondary btn-sm rounded-2" type="button" data-theme-toggle aria-label="Toggle theme">
             <i class="bi bi-sun"></i>
           </button>
@@ -113,6 +117,9 @@
           </div>
 
           <div class="camera-overlay camera-overlay--bottom">
+            <button class="btn btn-sm btn-info" id="btnCaptureControl" type="button">
+              <i class="bi bi-camera-fill me-1"></i> Capture
+            </button>
             <span class="badge bg-dark bg-opacity-75" id="topTemp">--°C <i class="bi bi-thermometer"></i></span>
             <span class="badge bg-dark bg-opacity-75" id="topHumidity">--% <i class="bi bi-droplet"></i></span>
             <span class="badge bg-dark bg-opacity-75" id="topBattery">--% <i class="bi bi-battery"></i></span>

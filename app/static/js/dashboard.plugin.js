@@ -14,9 +14,11 @@
 
   var DEFAULTS = {
     statusUrl: "/api/v1/status",
+    systemMetricsUrl: "/api/v1/system/metrics",
     eventsUrl: "/api/v1/events",
     capturesUrl: "/api/v1/captures/",
     pollIntervalMs: 2000,
+    systemMetricsPollMs: 5000,
     galleryPollMs: 5000,
   };
 
@@ -134,7 +136,24 @@
     // Connect SocketIO for system metrics
     this.connectSocket();
 
+    // Poll system metrics on init and periodically
+    this.refreshSystemMetrics();
+    this.systemMetricsTimerId = window.setInterval(function () {
+      self.refreshSystemMetrics();
+    }, this.options.systemMetricsPollMs);
+
     this.$root.attr("aria-busy", "false");
+    return this;
+  };
+
+  /* ── System Metrics Polling ──────────────────────── */
+
+  DashboardBoard.prototype.refreshSystemMetrics = function () {
+    var self = this;
+    $.getJSON(this.options.systemMetricsUrl)
+      .done(function (data) {
+        self.updateSystemMetrics(data);
+      });
     return this;
   };
 
@@ -368,6 +387,10 @@
     if (this.galleryTimerId) {
       window.clearInterval(this.galleryTimerId);
       this.galleryTimerId = null;
+    }
+    if (this.systemMetricsTimerId) {
+      window.clearInterval(this.systemMetricsTimerId);
+      this.systemMetricsTimerId = null;
     }
     if (this.socket && typeof this.socket.disconnect === "function") {
       this.socket.disconnect();

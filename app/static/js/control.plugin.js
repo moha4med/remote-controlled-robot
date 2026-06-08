@@ -6,6 +6,7 @@
  * - Handle touch gestures for swipe/press interactions.
  * - Poll telemetry and update overlay strip, battery bars, side panel.
  * - Animate numeric value transitions.
+ * - Capture images via `/api/v1/captures/`.
  * - Mobile: fullscreen camera by default, slide-up controls drawer.
  */
 (function ($) {
@@ -15,6 +16,7 @@
     moveUrl: "/api/v1/robot/move",
     sensorsUrl: "/api/v1/sensors/",
     statusUrl: "/api/v1/status",
+    capturesUrl: "/api/v1/captures/",
     pollIntervalMs: 3000,
   };
 
@@ -106,6 +108,9 @@
     this.$signalValueMobile = this.$root.find("#signal-value-mobile");
     this.$robotStateMobile = this.$root.find("#robot-state-mobile");
 
+    // Capture button
+    this.$btnCapture = this.$root.find("#btnCaptureControl");
+
     this.pollTimer = null;
     this.longPressTimer = null;
     this.startX = 0;
@@ -127,6 +132,13 @@
     if (this.$mobileToggle.length) {
       this.$mobileToggle.on("click.robotControlSurface", function () {
         self.$mobileDrawer.toggleClass("show");
+      });
+    }
+
+    // Capture button
+    if (this.$btnCapture.length) {
+      this.$btnCapture.on("click.robotControlSurface", function () {
+        self.triggerCapture();
       });
     }
 
@@ -210,6 +222,29 @@
       url: this.options.moveUrl,
       method: "POST",
       data: { direction: command },
+    });
+  };
+
+  /* ── Capture ──────────────────────────────────────── */
+
+  ControlSurface.prototype.triggerCapture = function () {
+    var self = this;
+    this.$btnCapture.prop("disabled", true).html('<i class="bi bi-arrow-repeat spin me-1"></i>...');
+
+    $.ajax({
+      url: this.options.capturesUrl,
+      method: "POST",
+      success: function () {
+        self.$btnCapture.html('<i class="bi bi-check me-1"></i> Done');
+      },
+      error: function () {
+        self.$btnCapture.html('<i class="bi bi-x me-1"></i> Failed');
+      },
+      complete: function () {
+        window.setTimeout(function () {
+          self.$btnCapture.prop("disabled", false).html('<i class="bi bi-camera-fill me-1"></i> Capture');
+        }, 2000);
+      },
     });
   };
 
