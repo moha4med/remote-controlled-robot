@@ -14,214 +14,243 @@
   </head>
   <body class="page-dashboard" data-dashboard-board>
 
-    <div class="d-flex vh-100">
+    <!-- Sidebar -->
+    <nav class="sidebar" aria-label="Primary navigation">
+      <div class="sidebar-logo" aria-hidden="true">RC</div>
+      <ul class="nav flex-column sidebar-nav">
+        <li class="nav-item"><a class="nav-link active" href="{{ url_for('dashboard.index') }}" aria-label="Dashboard"><i class="bi bi-grid-1x2"></i></a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('control.index') }}" aria-label="Control"><i class="bi bi-sliders"></i></a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('sensors.index') }}" aria-label="Sensors"><i class="bi bi-bar-chart-line"></i></a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('captures_page.index') }}" aria-label="Captures"><i class="bi bi-camera"></i></a></li>
+      </ul>
+      <div class="mt-auto d-flex flex-column gap-2">
+        <button class="btn btn-outline-secondary btn-sm rounded-2" type="button" data-fullscreen-toggle aria-label="Toggle fullscreen">
+          <i class="bi bi-arrows-fullscreen"></i>
+        </button>
+        <button class="btn btn-outline-secondary btn-sm rounded-2" type="button" data-theme-toggle aria-label="Toggle theme">
+          <i class="bi bi-sun"></i>
+        </button>
+      </div>
+    </nav>
 
-      <!-- Sidebar -->
-      <nav class="sidebar" aria-label="Primary navigation">
-        <div class="sidebar-logo" aria-hidden="true">RC</div>
-        <ul class="nav flex-column sidebar-nav">
-          <li class="nav-item"><a class="nav-link active" href="{{ url_for('dashboard.index') }}" aria-label="Dashboard"><i class="bi bi-activity"></i></a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('control.index') }}" aria-label="Control"><i class="bi bi-sliders"></i></a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('sensors.index') }}" aria-label="Sensors"><i class="bi bi-bar-chart"></i></a></li>
-          <li class="nav-item"><a class="nav-link" href="{{ url_for('captures_page.index') }}" aria-label="Captures"><i class="bi bi-camera"></i></a></li>
-        </ul>
-        <div class="mt-auto d-flex flex-column gap-2">
-          <button class="btn btn-outline-secondary btn-sm rounded-2" type="button" data-fullscreen-toggle aria-label="Toggle fullscreen">
-            <i class="bi bi-arrows-fullscreen"></i>
-          </button>
-          <button class="btn btn-outline-secondary btn-sm rounded-2" type="button" data-theme-toggle aria-label="Toggle theme">
-            <i class="bi bi-sun"></i>
-          </button>
-        </div>
-      </nav>
+    <!-- Main -->
+    <main class="dashboard-main">
 
-      <!-- Main -->
-      <main class="flex-grow-1 overflow-auto p-3 p-md-4">
-
-        <!-- Header -->
-        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+      <!-- Top Bar -->
+      <header class="dashboard-topbar">
+        <div class="d-flex align-items-center gap-3">
+          <div class="topbar-brand-icon"><i class="bi bi-robot"></i></div>
           <div>
-            <p class="text-muted text-uppercase mb-1" style="font-size:11px;letter-spacing:.08em">Robot Dashboard</p>
-            <h1 class="h4 fw-bold mb-0">Live Feed & Telemetry</h1>
-          </div>
-          <div class="d-flex gap-2">
-            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">
-              <span class="d-inline-block rounded-circle bg-success me-1" style="width:6px;height:6px"></span> Live
-            </span>
-            <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25">
-              <span class="d-inline-block rounded-circle bg-info me-1" style="width:6px;height:6px"></span> Stream Ready
-            </span>
+            <h1 class="topbar-title">Robot Dashboard</h1>
+            <p class="topbar-subtitle">Live telemetry & control center</p>
           </div>
         </div>
-
-        <div class="row g-3">
-
-          <!-- Camera Preview -->
-          <div class="col-lg-7">
-            <div class="card h-100">
-              <div class="card-body p-0 position-relative camera-stage">
-                <img id="cameraPreviewImg" src="{{ url_for('camera.video_feed') }}" alt="Live camera stream" class="camera-stage__image" />
-                <div class="camera-overlay camera-overlay--top">
-                  <span class="badge bg-danger bg-opacity-75"><span class="d-inline-block rounded-circle bg-white me-1" style="width:6px;height:6px"></span> Live Stream</span>
-                </div>
-                <div class="camera-overlay camera-overlay--bottom">
-                  <button class="btn btn-sm btn-info" id="btnCapture" type="button">
-                    <i class="bi bi-camera-fill me-1"></i> Capture
-                  </button>
-                  <span class="badge bg-success bg-opacity-75" id="captureStatus">
-                    <i class="bi bi-check-circle me-1"></i> Ready
-                  </span>
-                </div>
-              </div>
-              <div class="card-footer d-flex flex-wrap gap-3 py-2 px-3">
-                <div class="d-flex align-items-center gap-1">
-                  <span class="d-inline-block rounded-circle bg-success" style="width:6px;height:6px"></span>
-                  <small class="text-muted">Telemetry live</small>
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                  <small class="text-muted">Last update</small>
-                  <small class="font-mono" id="dashboardTimestamp">--:--:--</small>
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                  <small class="text-muted">Captures</small>
-                  <small class="font-mono text-info fw-bold" id="captureCount">0</small>
-                </div>
-              </div>
-            </div>
+        <div class="d-flex align-items-center gap-2">
+          <div class="status-pulse" id="systemStatus">
+            <span class="status-pulse__dot"></span>
+            <span class="status-pulse__label">Online</span>
           </div>
-
-          <!-- Telemetry -->
-          <div class="col-lg-5">
-            <div class="card h-100">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <div>
-                  <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">Robot Status</p>
-                  <h2 class="h6 fw-bold mb-0">Core Telemetry</h2>
-                </div>
-                <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25">Active</span>
-              </div>
-              <div class="card-body">
-                <div class="row g-3 text-center">
-                  <div class="col-6">
-                    <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
-                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Battery</div>
-                      <div class="h4 fw-bold text-info mb-0" id="batteryValue">80%</div>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
-                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Signal</div>
-                      <div class="h4 fw-bold mb-0" id="signal">92%</div>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
-                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Mode</div>
-                      <div class="h4 fw-bold mb-0" id="modeValue">Manual</div>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary">
-                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Temp</div>
-                      <div class="h4 fw-bold mb-0" id="temp">47°C</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- System Metrics -->
-          <div class="col-lg-5">
-            <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <div>
-                  <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">System</p>
-                  <h2 class="h6 fw-bold mb-0">Host Metrics</h2>
-                </div>
-                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25" id="systemStatus">
-                  <span class="d-inline-block rounded-circle bg-success me-1" style="width:6px;height:6px"></span> Online
-                </span>
-              </div>
-              <div class="card-body">
-                <div class="row g-2 text-center">
-                  <div class="col-6">
-                    <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
-                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-cpu me-1"></i>CPU</div>
-                      <div class="h5 fw-bold mb-0" id="sysCpu">--%</div>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
-                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-memory me-1"></i>Memory</div>
-                      <div class="h5 fw-bold mb-0" id="sysMem">--%</div>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
-                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-hdd me-1"></i>Disk</div>
-                      <div class="h5 fw-bold mb-0" id="sysDisk">--%</div>
-                    </div>
-                  </div>
-                  <div class="col-6">
-                    <div class="p-2 rounded bg-dark bg-opacity-50 border border-secondary">
-                      <div class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-thermometer-half me-1"></i>CPU Temp</div>
-                      <div class="h5 fw-bold mb-0" id="sysCpuTemp">--°C</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="mt-2 text-center">
-                  <small class="text-muted">Uptime: </small>
-                  <small class="font-mono" id="sysUptime">--</small>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Actions -->
-          <div class="col-lg-5">
-            <div class="card">
-              <div class="card-header">
-                <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">Quick Actions</p>
-                <h2 class="h6 fw-bold mb-0">Mission Controls</h2>
-              </div>
-              <div class="card-body">
-                <div class="d-flex flex-wrap gap-2">
-                  <button class="btn btn-primary action-btn" data-action="start" type="button">Start Mission</button>
-                  <button class="btn btn-outline-secondary action-btn" data-action="stop" type="button">Stop</button>
-                  <button class="btn btn-outline-secondary action-btn" data-action="return" type="button">Return</button>
-                  <button class="btn btn-danger action-btn" data-action="emergency" type="button">Emergency</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Gallery -->
-          <div class="col-lg-7">
-            <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <div>
-                  <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">Gallery</p>
-                  <h2 class="h6 fw-bold mb-0">Captured Images</h2>
-                </div>
-                <span class="badge bg-secondary"><i class="bi bi-image me-1"></i> <span id="galleryCountText">0</span></span>
-              </div>
-              <div class="card-body">
-                <div class="capture-grid" id="captureGallery">
-                  <div class="text-center text-muted py-4" id="galleryEmpty">
-                    <small>No captures yet. Click <strong>Capture</strong> above.</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
+          <span class="badge bg-bg-panel-raised text-text-secondary border border-border-subtle font-mono" id="dashboardTimestamp">--:--:--</span>
         </div>
-      </main>
-    </div>
+      </header>
+
+      <!-- Content Grid -->
+      <div class="dashboard-grid">
+
+        <!-- Camera Feed (Large) -->
+        <section class="dashboard-card dashboard-card--camera">
+          <div class="dashboard-card__header">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-camera-video text-accent"></i>
+              <span class="dashboard-card__title">Live Camera Feed</span>
+            </div>
+            <span class="badge bg-danger bg-opacity-75 text-white">
+              <span class="d-inline-block rounded-circle bg-white me-1" style="width:5px;height:5px"></span> LIVE
+            </span>
+          </div>
+          <div class="camera-stage">
+            <img id="cameraPreviewImg" src="{{ url_for('camera.video_feed') }}" alt="Live camera stream" class="camera-stage__image" />
+            <div class="camera-overlay camera-overlay--top">
+              <span class="badge bg-dark bg-opacity-75"><i class="bi bi-broadcast me-1"></i> RCR-001</span>
+              <span class="badge bg-dark bg-opacity-75 font-mono" id="camTime">--:--:--</span>
+            </div>
+            <div class="camera-overlay camera-overlay--bottom">
+              <button class="btn btn-sm btn-info" id="btnCapture" type="button">
+                <i class="bi bi-camera-fill me-1"></i> Capture
+              </button>
+              <span class="badge bg-success bg-opacity-75" id="captureStatus">
+                <i class="bi bi-check-circle me-1"></i> Ready
+              </span>
+            </div>
+          </div>
+          <div class="camera-metrics">
+            <div class="camera-metric">
+              <i class="bi bi-battery-charging camera-metric__icon"></i>
+              <span class="camera-metric__value" id="batteryValue">--%</span>
+              <span class="camera-metric__label">Battery</span>
+            </div>
+            <div class="camera-metric">
+              <i class="bi bi-wifi camera-metric__icon"></i>
+              <span class="camera-metric__value" id="signal">--%</span>
+              <span class="camera-metric__label">Signal</span>
+            </div>
+            <div class="camera-metric">
+              <i class="bi bi-thermometer-half camera-metric__icon"></i>
+              <span class="camera-metric__value" id="temp">--°C</span>
+              <span class="camera-metric__label">Temp</span>
+            </div>
+            <div class="camera-metric">
+              <i class="bi bi-image camera-metric__icon"></i>
+              <span class="camera-metric__value" id="captureCount">0</span>
+              <span class="camera-metric__label">Captures</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Telemetry Panel -->
+        <section class="dashboard-card dashboard-card--telemetry">
+          <div class="dashboard-card__header">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-speedometer2 text-accent"></i>
+              <span class="dashboard-card__title">Core Telemetry</span>
+            </div>
+            <span class="badge bg-bg-panel-raised text-text-secondary border border-border-subtle">Active</span>
+          </div>
+          <div class="telemetry-grid">
+            <div class="telemetry-item">
+              <div class="telemetry-item__icon"><i class="bi bi-battery-charging"></i></div>
+              <div class="telemetry-item__body">
+                <span class="telemetry-item__label">Battery</span>
+                <span class="telemetry-item__value" id="batteryValueTel">80%</span>
+              </div>
+              <div class="telemetry-item__bar"><div class="telemetry-item__bar-fill" style="width:80%"></div></div>
+            </div>
+            <div class="telemetry-item">
+              <div class="telemetry-item__icon"><i class="bi bi-wifi"></i></div>
+              <div class="telemetry-item__body">
+                <span class="telemetry-item__label">Signal</span>
+                <span class="telemetry-item__value" id="signalTel">92%</span>
+              </div>
+              <div class="telemetry-item__bar"><div class="telemetry-item__bar-fill" style="width:92%"></div></div>
+            </div>
+            <div class="telemetry-item">
+              <div class="telemetry-item__icon"><i class="bi bi-thermometer-half"></i></div>
+              <div class="telemetry-item__body">
+                <span class="telemetry-item__label">Temperature</span>
+                <span class="telemetry-item__value" id="tempTel">47°C</span>
+              </div>
+              <div class="telemetry-item__bar"><div class="telemetry-item__bar-fill" style="width:47%"></div></div>
+            </div>
+            <div class="telemetry-item">
+              <div class="telemetry-item__icon"><i class="bi bi-gear"></i></div>
+              <div class="telemetry-item__body">
+                <span class="telemetry-item__label">Mode</span>
+                <span class="telemetry-item__value text-accent" id="modeValue">Manual</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- System Host Metrics -->
+        <section class="dashboard-card dashboard-card--system">
+          <div class="dashboard-card__header">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-pc-display text-accent"></i>
+              <span class="dashboard-card__title">Host Metrics</span>
+            </div>
+            <span class="badge bg-bg-panel-raised text-text-secondary border border-border-subtle" id="sysStatusHost">
+              <span class="d-inline-block rounded-circle bg-status-ok me-1" style="width:5px;height:5px"></span> Online
+            </span>
+          </div>
+          <div class="sysmetrics-grid">
+            <div class="sysmetric">
+              <div class="sysmetric__header">
+                <i class="bi bi-cpu"></i>
+                <span>CPU</span>
+              </div>
+              <span class="sysmetric__value" id="sysCpu">--%</span>
+            </div>
+            <div class="sysmetric">
+              <div class="sysmetric__header">
+                <i class="bi bi-memory"></i>
+                <span>Memory</span>
+              </div>
+              <span class="sysmetric__value" id="sysMem">--%</span>
+            </div>
+            <div class="sysmetric">
+              <div class="sysmetric__header">
+                <i class="bi bi-hdd"></i>
+                <span>Disk</span>
+              </div>
+              <span class="sysmetric__value" id="sysDisk">--%</span>
+            </div>
+            <div class="sysmetric">
+              <div class="sysmetric__header">
+                <i class="bi bi-thermometer-half"></i>
+                <span>CPU Temp</span>
+              </div>
+              <span class="sysmetric__value" id="sysCpuTemp">--°C</span>
+            </div>
+          </div>
+          <div class="sysmetrics-uptime">
+            <i class="bi bi-clock-history me-1"></i>
+            <span>Uptime: <strong id="sysUptime">--</strong></span>
+          </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="dashboard-card dashboard-card--actions">
+          <div class="dashboard-card__header">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-lightning-charge text-accent"></i>
+              <span class="dashboard-card__title">Quick Actions</span>
+            </div>
+          </div>
+          <div class="actions-grid">
+            <button class="action-btn action-btn--primary" data-action="start" type="button">
+              <i class="bi bi-play-fill"></i>
+              <span>Start Mission</span>
+            </button>
+            <button class="action-btn action-btn--secondary" data-action="stop" type="button">
+              <i class="bi bi-stop-fill"></i>
+              <span>Stop</span>
+            </button>
+            <button class="action-btn action-btn--secondary" data-action="return" type="button">
+              <i class="bi bi-arrow-return-left"></i>
+              <span>Return</span>
+            </button>
+            <button class="action-btn action-btn--danger" data-action="emergency" type="button">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <span>Emergency</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Capture Gallery -->
+        <section class="dashboard-card dashboard-card--gallery">
+          <div class="dashboard-card__header">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-images text-accent"></i>
+              <span class="dashboard-card__title">Captured Images</span>
+            </div>
+            <a href="{{ url_for('captures_page.index') }}" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-arrow-up-right me-1"></i> View All
+            </a>
+          </div>
+          <div class="capture-grid" id="captureGallery">
+            <div class="gallery-empty" id="galleryEmpty">
+              <i class="bi bi-camera"></i>
+              <span>No captures yet</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='js/dashboard.plugin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/page-init.js') }}"></script>
   </body>

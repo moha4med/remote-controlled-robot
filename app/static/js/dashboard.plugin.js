@@ -3,6 +3,7 @@
  *
  * Responsibilities:
  * - Poll `/api/v1/status` every 2s for live telemetry.
+ * - Poll `/api/v1/system/metrics` every 5s for host metrics.
  * - Receive system metrics via SocketIO `system:update` events.
  * - Animate numeric value transitions.
  * - Handle image capture via `/api/v1/captures/`.
@@ -73,12 +74,13 @@
   function DashboardBoard(element, options) {
     this.$root = $(element);
     this.options = $.extend({}, DEFAULTS, options);
-    this.$battery = this.$root.find("#batteryValue");
-    this.$signal = this.$root.find("#signal");
+
+    // Telemetry elements (camera metrics bar)
+    this.$battery = this.$root.find("#batteryValue, #batteryValueTel");
+    this.$signal = this.$root.find("#signal, #signalTel");
+    this.$temp = this.$root.find("#temp, #tempTel");
     this.$mode = this.$root.find("#modeValue");
-    this.$temp = this.$root.find("#temp");
-    this.$timestamp = this.$root.find("#dashboardTimestamp");
-    this.$actions = this.$root.find("[data-action]");
+    this.$timestamp = this.$root.find("#dashboardTimestamp, #camTime");
 
     // System metrics elements
     this.$sysCpu = this.$root.find("#sysCpu");
@@ -87,6 +89,7 @@
     this.$sysCpuTemp = this.$root.find("#sysCpuTemp");
     this.$sysUptime = this.$root.find("#sysUptime");
     this.$systemStatus = this.$root.find("#systemStatus");
+    this.$sysStatusHost = this.$root.find("#sysStatusHost");
 
     // Capture elements
     this.$btnCapture = this.$root.find("#btnCapture");
@@ -94,11 +97,14 @@
     this.$captureCount = this.$root.find("#captureCount");
     this.$gallery = this.$root.find("#captureGallery");
     this.$galleryEmpty = this.$root.find("#galleryEmpty");
-    this.$galleryCountText = this.$root.find("#galleryCountText");
     this.$cameraPreview = this.$root.find("#cameraPreviewImg");
+
+    // Quick actions
+    this.$actions = this.$root.find("[data-action]");
 
     this.timerId = null;
     this.galleryTimerId = null;
+    this.systemMetricsTimerId = null;
     this.knownCaptureIds = {};
     this.socket = null;
   }
@@ -133,7 +139,7 @@
       self.loadGallery();
     }, this.options.galleryPollMs);
 
-    // Connect SocketIO for system metrics
+    // Connect SocketIO
     this.connectSocket();
 
     // Poll system metrics on init and periodically
@@ -170,9 +176,11 @@
     this.socket.on("connect", function () {
       if (self.$systemStatus.length) {
         self.$systemStatus
-          .html('<span class="d-inline-block rounded-circle bg-success me-1" style="width:6px;height:6px"></span> Live')
-          .removeClass("bg-warning bg-danger")
-          .addClass("bg-success bg-opacity-25 text-success border border-success border-opacity-25");
+          .html('<span class="status-pulse__dot"></span><span class="status-pulse__label">Live</span>');
+      }
+      if (self.$sysStatusHost.length) {
+        self.$sysStatusHost
+          .html('<span class="d-inline-block rounded-circle bg-status-ok me-1" style="width:5px;height:5px"></span> Live');
       }
     });
 
@@ -183,9 +191,11 @@
     this.socket.on("disconnect", function () {
       if (self.$systemStatus.length) {
         self.$systemStatus
-          .html('<span class="d-inline-block rounded-circle bg-danger me-1" style="width:6px;height:6px"></span> Disconnected')
-          .removeClass("bg-success bg-warning")
-          .addClass("bg-danger bg-opacity-25 text-danger border border-danger border-opacity-25");
+          .html('<span class="status-pulse__dot status-pulse__dot--off"></span><span class="status-pulse__label">Disconnected</span>');
+      }
+      if (self.$sysStatusHost.length) {
+        self.$sysStatusHost
+          .html('<span class="d-inline-block rounded-circle bg-status-danger me-1" style="width:5px;height:5px"></span> Offline');
       }
     });
   };
@@ -205,7 +215,7 @@
       this.$sysDisk.text(Number(data.disk_usage).toFixed(0) + "%");
     }
     if (data.cpu_temperature !== undefined && this.$sysCpuTemp.length) {
-      this.$sysCpuTemp.text(data.cpu_temperature + "\u00b0C");
+      this.$sysCpuTemp.text(Number(data.cpu_temperature).toFixed(0) + "\u00b0C");
     }
     if (data.uptime !== undefined && this.$sysUptime.length) {
       this.$sysUptime.text(formatUptime(data.uptime));
@@ -242,7 +252,8 @@
     if (data.temp !== undefined) {
       this.$temp.text(data.temp + "\u00b0C");
     }
-    this.$timestamp.text(new Date().toLocaleTimeString());
+    var timeStr = new Date().toLocaleTimeString();
+    this.$timestamp.text(timeStr);
     return this;
   };
 
@@ -304,40 +315,35 @@
   DashboardBoard.prototype.loadGallery = function () {
     var self = this;
     $.getJSON(this.options.capturesUrl)
-      .done(function (captures) {
-        self.renderGallery(captures);
+      .done(function (data) {
+        var items = data.items || data;
+        if (Array.isArray(items)) {
+          self.renderGallery(items);
+        }
       });
   };
 
   DashboardBoard.prototype.renderGallery = function (captures) {
     if (!captures || !captures.length) {
-      this.$gallery.empty().append(this.$galleryEmpty);
+      this.$gallery.empty().append(
+        '<div class="gallery-empty" id="galleryEmpty"><i class="bi bi-camera"></i><span>No captures yet</span></div>'
+      );
       this.$captureCount.text("0");
-      this.$galleryCountText.text("0");
       return this;
     }
 
     this.$captureCount.text(captures.length);
-    this.$galleryCountText.text(captures.length);
-
-    var hadItems = Object.keys(this.knownCaptureIds).length > 0;
-    var prevFirstId = Object.keys(this.knownCaptureIds)[0];
-    var hasNew = false;
 
     var html = "";
     var self = this;
     $.each(captures, function (_, cap) {
       self.knownCaptureIds[cap.id] = true;
-      if (!hadItems || (prevFirstId && cap.id > parseInt(prevFirstId))) {
-        hasNew = true;
-      }
       var thumbUrl = cap.thumbnail_url || cap.url;
       html +=
         '<div class="capture-card" data-id="' + cap.id +
         '" data-url="' + cap.url +
         '" title="' + formatTimestamp(cap.created_at) + '">' +
         '<img src="' + thumbUrl + '" alt="Capture" loading="lazy" />' +
-        '<span class="capture-card__time">' + formatTimestamp(cap.created_at) + '</span>' +
         '</div>';
     });
     this.$gallery.empty().append(html);
@@ -346,10 +352,6 @@
       var url = $(this).data("url");
       if (url) self.showPreview(url);
     });
-
-    if (hasNew && this.$gallery.length) {
-      this.$gallery.scrollTop(0);
-    }
 
     return this;
   };
