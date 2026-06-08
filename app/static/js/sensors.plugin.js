@@ -19,8 +19,10 @@
   var DEFAULTS = {
     sensorsUrl: "/api/v1/sensors/",
     logsUrl: "/api/v1/history/",
+    hourlyUrl: "/api/v1/history/hourly",
     pollIntervalMs: 2500,
     points: 48,
+    hourlyHours: 24,
     socketEnabled: true,
     socketUrl: null,
     socketEvent: "sensor:update",
@@ -98,14 +100,22 @@
     this.$sysStatus = this.$root.find("#sysStatusBadge");
 
     this.pollTimer = null;
+    this.hourlyPollTimer = null;
     this.socketFallbackTimer = null;
     this.socket = null;
     this.usingSocket = false;
     this.charts = {};
+    this.hourlyCharts = {};
     this.history = {
       temp: [],
       humidity: [],
     };
+    this.hourlyData = {
+      temp: [],
+      humidity: [],
+      labels: [],
+    };
+    this.viewMode = "realtime"; // "realtime" or "hourly"
     this.palette = {
       temp: getToken("--color-danger", getToken("--accent", "#14b8a6")),
       humidity: getToken("--color-info", getToken("--accent", "#38bdf8")),
@@ -374,8 +384,152 @@
     }
   };
 
+  /* ── Hourly Data Loading ─────────────────────────── */
+
+  SensorDashboard.prototype.loadHourlyData = function (callback) {
+    var self = this;
+    $.getJSON(this.options.hourlyUrl, { hours: this.options.hourlyHours })
+      .done(function (data) {
+        if (!data || !data.length) {
+          self.hourlyData = { temp: [], humidity: [], labels: [] };
+          if (callback) callback();
+          return;
+        }
+        self.hourlyData.labels = [];
+        self.hourlyData.temp = [];
+        self.hourlyData.humidity = [];
+        $.each(data, function (_, entry) {
+          // Format hour label: "2024-01-01 14:00:00" → "14:00"
+          var label = entry.hour ? entry.hour.split(" ")[1]?.slice(0, 5) || entry.hour : "";
+          self.hourlyData.labels.push(label);
+          self.hourlyData.temp.push(coerceNumber(entry.temperature));
+          self.hourlyData.humidity.push(coerceNumber(entry.humidity));
+        });
+        if (callback) callback();
+      })
+      .fail(function () {
+        self.hourlyData = { temp: [], humidity: [], labels: [] };
+        if (callback) callback();
+      });
+  };
+
+  /* ── Hourly Chart Creation ───────────────────────── */
+
+  SensorDashboard.prototype.createHourlyChart = function (container, key) {
+    var values = this.hourlyData[key].length
+      ? this.hourlyData[key].slice(0)
+      : [null];
+    var labels = this.hourlyData.labels.length
+      ? this.hourlyData.labels.slice(0)
+      : [""];
+
+    var seriesColor = this.palette[key];
+    var fillColor = colorToRgba(seriesColor, 0.18);
+    var gridColor = colorToRgba(this.palette.textSecondary, 0.16);
+
+    // Destroy existing hourly chart if present
+    if (this.hourlyCharts[key] && typeof this.hourlyCharts[key].destroy === "function") {
+      this.hourlyCharts[key].destroy();
+    }
+
+    this.hourlyCharts[key] = new window.uPlot({
+      width: container.clientWidth || 520,
+      height: container.clientHeight || 220,
+      class: "sensor-uplot",
+      legend: { show: false },
+      cursor: { show: false },
+      scales: { x: { time: false }, y: { auto: true } },
+      series: [
+        { label: "Hour" },
+        {
+          label: key,
+          stroke: seriesColor,
+          fill: fillColor,
+          width: 2,
+          spanGaps: true,
+        },
+      ],
+      axes: [
+        {
+          show: true,
+          grid: { show: false },
+          values: function (self, splits) {
+            return splits.map(function (v, i) {
+              return labels[i] || "";
+            });
+          },
+          stroke: gridColor,
+          font: "9px DM Sans",
+          size: 28,
+        },
+        { show: false, grid: { stroke: gridColor } },
+      ],
+    }, [labels, values], container);
+
+    return this.hourlyCharts[key];
+  };
+
+  /* ── View Mode Toggle ────────────────────────────── */
+
+  SensorDashboard.prototype.switchView = function (mode) {
+    var self = this;
+    this.viewMode = mode;
+
+    if (mode === "hourly") {
+      // Load hourly data and create hourly charts
+      this.loadHourlyData(function () {
+        $.each(self.$charts, function (key, $canvas) {
+          if ($canvas.length && window.uPlot) {
+            // Destroy realtime chart
+            if (self.charts[key] && typeof self.charts[key].destroy === "function") {
+              self.charts[key].destroy();
+              self.charts[key] = null;
+            }
+            // Create hourly chart
+            if (self.hourlyData[key].length) {
+              self.createHourlyChart($canvas[0], key);
+            }
+          }
+        });
+        self.resizeCharts();
+      });
+    } else {
+      // Switch back to realtime — recreate realtime charts
+      $.each(this.$charts, function (key, $canvas) {
+        if ($canvas.length && window.uPlot) {
+          if (self.hourlyCharts[key] && typeof self.hourlyCharts[key].destroy === "function") {
+            self.hourlyCharts[key].destroy();
+            self.hourlyCharts[key] = null;
+          }
+          self.charts[key] = self.createChart($canvas[0], key);
+        }
+      });
+      self.resizeCharts();
+    }
+  };
+
+  SensorDashboard.prototype.startHourlyPolling = function () {
+    var self = this;
+    if (this.hourlyPollTimer) return;
+    this.hourlyPollTimer = window.setInterval(function () {
+      if (self.viewMode === "hourly") {
+        self.loadHourlyData(function () {
+          $.each(self.hourlyCharts, function (key, chart) {
+            if (chart && self.hourlyData.labels.length) {
+              chart.setData([self.hourlyData.labels, self.hourlyData[key]]);
+            }
+          });
+        });
+      }
+    }, 60000);
+  };
+
   SensorDashboard.prototype.destroy = function () {
     this.stopPolling();
+    if (this.hourlyPollTimer) {
+      window.clearInterval(this.hourlyPollTimer);
+      this.hourlyPollTimer = null;
+    }
     this.clearSocketFallback();
     $(window).off(EVENT_NS);
     if (this.socket && typeof this.socket.disconnect === "function") {
@@ -383,6 +537,9 @@
       this.socket = null;
     }
     $.each(this.charts, function (_, chart) {
+      if (chart && typeof chart.destroy === "function") chart.destroy();
+    });
+    $.each(this.hourlyCharts, function (_, chart) {
       if (chart && typeof chart.destroy === "function") chart.destroy();
     });
     this.$root.removeData(DATA_KEY);

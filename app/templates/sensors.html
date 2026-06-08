@@ -121,14 +121,40 @@
           </div>
         </div>
 
+        <!-- Chart View Toggle -->
+        <div class="card mb-3">
+          <div class="card-body py-2">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">View:</span>
+                <div class="btn-group btn-group-sm" role="group" id="chartViewToggle">
+                  <button type="button" class="btn btn-outline-secondary active" data-view="realtime" title="Real-time readings">
+                    <i class="bi bi-activity me-1"></i>Real-time
+                  </button>
+                  <button type="button" class="btn btn-outline-secondary" data-view="hourly" title="Hourly averages">
+                    <i class="bi bi-clock me-1"></i>Hourly
+                  </button>
+                </div>
+              </div>
+              <div class="d-flex align-items-center gap-1" id="hourlyRange" style="display:none">
+                <span class="text-muted text-uppercase" style="font-size:9px;letter-spacing:.08em">Range:</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-hours="6">6h</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-hours="12">12h</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-hours="24">24h</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-hours="48">48h</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Temperature Chart -->
         <div class="card mb-3">
           <div class="card-header d-flex justify-content-between align-items-center">
             <div>
               <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">Temperature</p>
-              <h2 class="h6 fw-bold mb-0">Thermal Trend</h2>
+              <h2 class="h6 fw-bold mb-0" id="tempChartTitle">Thermal Trend</h2>
             </div>
-            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">Live</span>
+            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25" id="tempChartBadge">Live</span>
           </div>
           <div class="card-body position-relative chart-body">
             <div id="tempChart" class="sensor-chart"></div>
@@ -140,9 +166,9 @@
           <div class="card-header d-flex justify-content-between align-items-center">
             <div>
               <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">Humidity</p>
-              <h2 class="h6 fw-bold mb-0">Humidity Trend</h2>
+              <h2 class="h6 fw-bold mb-0" id="humidityChartTitle">Humidity Trend</h2>
             </div>
-            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">Live</span>
+            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25" id="humidityChartBadge">Live</span>
           </div>
           <div class="card-body position-relative chart-body">
             <div id="humidityChart" class="sensor-chart"></div>
