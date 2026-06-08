@@ -84,6 +84,8 @@
     this.$humidityBar = this.$root.find("#humidityBarFill");
     this.$mode = this.$root.find("#modeValue");
     this.$timestamp = this.$root.find("#dashboardTimestamp, #camTime");
+    this.$batteryBar = this.$root.find("#batteryBarFill");
+    this.$signalBar = this.$root.find("#signalBarFill");
 
     // System metrics elements
     this.$sysCpu = this.$root.find("#sysCpu");
@@ -254,9 +256,15 @@
     if (statusData) {
       if (statusData.battery !== undefined) {
         animateValue(this.$battery, statusData.battery, "%");
+        if (this.$batteryBar.length) {
+          this.$batteryBar.css("width", Math.min(statusData.battery, 100) + "%");
+        }
       }
       if (statusData.signal !== undefined) {
         animateValue(this.$signal, statusData.signal, "%");
+        if (this.$signalBar.length) {
+          this.$signalBar.css("width", Math.min(statusData.signal, 100) + "%");
+        }
       }
       if (statusData.mode !== undefined) {
         this.$mode.text(statusData.mode);
