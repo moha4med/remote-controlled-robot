@@ -14,8 +14,6 @@ from app.routes.api.v1.status import status_bp
 from app.routes.api.v1.captures import captures_bp
 from app.routes.api.v1.users import users_bp
 from app.routes.api.v1.settings import settings_bp
-from app.routes.api.v1.history_logs import history_logs_bp
-from app.routes.api.v1.hourly_history import hourly_history_bp
 from app.routes.api.v1.system import system_bp
 from app.routes.api.v1.ai import ai_bp
 
@@ -76,8 +74,6 @@ def create_app():
     app.register_blueprint(captures_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(settings_bp)
-    app.register_blueprint(history_logs_bp)
-    app.register_blueprint(hourly_history_bp)
     app.register_blueprint(system_bp)
     app.register_blueprint(ai_bp)
 
