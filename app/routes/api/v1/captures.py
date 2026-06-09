@@ -166,6 +166,59 @@ def serve_thumbnail(filename):
     return _add_cors(response)
 
 
+@captures_bp.route("/<int:capture_id>", methods=["GET"])
+@limiter.limit("30/minute")
+def get_capture(capture_id):
+    """Return a single capture with sensor data from the moment it was taken."""
+    from app.models.sensor_log import SensorLog
+    from sqlalchemy import func
+
+    capture = Capture.query.get_or_404(capture_id)
+    base_url = _get_base_url()
+    data = capture.to_dict(base_url=base_url)
+
+    # Find the closest sensor reading to the capture time
+    # First try: reading just before or at capture time
+    sensor_before = (
+        SensorLog.query
+        .filter(SensorLog.recorded_at <= capture.created_at)
+        .order_by(SensorLog.recorded_at.desc())
+        .first()
+    )
+
+    # Second try: reading just after capture time
+    sensor_after = (
+        SensorLog.query
+        .filter(SensorLog.recorded_at > capture.created_at)
+        .order_by(SensorLog.recorded_at.asc())
+        .first()
+    )
+
+    # Pick the closest one
+    sensor = sensor_before
+    if sensor_after and sensor_before:
+        diff_before = abs((capture.created_at - sensor_before.recorded_at).total_seconds())
+        diff_after = abs((sensor_after.recorded_at - capture.created_at).total_seconds())
+        if diff_after < diff_before:
+            sensor = sensor_after
+    elif sensor_after and not sensor_before:
+        sensor = sensor_after
+
+    if sensor:
+        data["sensor"] = {
+            "temperature": sensor.temperature,
+            "humidity": sensor.humidity,
+            "battery": sensor.battery,
+            "signal_strength": sensor.signal_strength,
+            "recorded_at": sensor.recorded_at.isoformat() if sensor.recorded_at else None,
+        }
+    else:
+        data["sensor"] = None
+
+    response = make_response(jsonify(data))
+    return _add_cors(response)
+
+
 @captures_bp.route("/latest", methods=["GET"])
 @limiter.limit("30/minute")
 # @jwt_required_role("operator")
