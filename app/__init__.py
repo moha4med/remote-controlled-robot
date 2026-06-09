@@ -22,6 +22,8 @@ from app.routes.dashboard import dashboard_bp
 from app.routes.sensors import sensors_page_bp
 from app.routes.captures import captures_page_bp
 
+from app.ai.detection.detector import ObjectDetector
+
 
 def create_app():
     app = Flask(__name__)
@@ -82,6 +84,9 @@ def create_app():
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(sensors_page_bp)
     app.register_blueprint(captures_page_bp)
+    
+    detector = ObjectDetector()
+    detector.load() 
 
     with app.app_context():
         db.create_all()
