@@ -11,7 +11,7 @@ class ObjectDetector:
             cls._instance = super().__new__(cls)
             
             print("Loading YOLOv8 model...")
-            cls._instance.model = YOLO("yolov8m.pt")
+            cls._instance.model = YOLO("yolov8n.pt")
             
         return cls._instance
     
