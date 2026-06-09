@@ -125,6 +125,55 @@
           </div>
         </div>
 
+        <!-- Sensor Statistics (24h) -->
+        <div class="card mb-3">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+              <p class="text-muted text-uppercase mb-0" style="font-size:10px;letter-spacing:.08em">Statistics</p>
+              <h2 class="h6 fw-bold mb-0">24-Hour Summary</h2>
+            </div>
+            <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25">
+              <i class="bi bi-graph-up me-1"></i> <span id="statReadingsCount">--</span> readings
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-6 col-lg-3">
+                <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary text-center">
+                  <div class="text-muted text-uppercase mb-1" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-thermometer-half me-1"></i>Avg Temp</div>
+                  <div class="h4 fw-bold font-mono mb-0" id="statAvgTemp">--</div>
+                  <div class="text-muted mt-1" style="font-size:9px">
+                    <span id="statMinTemp">--</span> / <span id="statMaxTemp">--</span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary text-center">
+                  <div class="text-muted text-uppercase mb-1" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-droplet-fill me-1"></i>Avg Humidity</div>
+                  <div class="h4 fw-bold font-mono mb-0" id="statAvgHum">--</div>
+                  <div class="text-muted mt-1" style="font-size:9px">
+                    <span id="statMinHum">--</span> / <span id="statMaxHum">--</span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary text-center">
+                  <div class="text-muted text-uppercase mb-1" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-wifi me-1"></i>Avg Signal</div>
+                  <div class="h4 fw-bold font-mono mb-0" id="statAvgSignal">--</div>
+                  <div class="text-muted mt-1" style="font-size:9px">WiFi strength</div>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="p-3 rounded bg-dark bg-opacity-50 border border-secondary text-center">
+                  <div class="text-muted text-uppercase mb-1" style="font-size:9px;letter-spacing:.08em"><i class="bi bi-battery-charging me-1"></i>Avg Battery</div>
+                  <div class="h4 fw-bold font-mono mb-0" id="statAvgBattery">--</div>
+                  <div class="text-muted mt-1" style="font-size:9px">Power level</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Chart View Toggle -->
         <div class="card mb-3">
           <div class="card-body py-2">

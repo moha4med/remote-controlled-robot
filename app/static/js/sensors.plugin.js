@@ -2,12 +2,13 @@
  * Robot sensors dashboard plugin.
  *
  * Responsibilities:
- * - Load historical sensor data from `/api/v1/history/` on init.
+ * - Load historical sensor data from `/api/v1/sensors/history` on init.
  * - Render live temperature and humidity charts with Chart.js.
  * - Prefer Socket.IO updates when available.
  * - Fall back to polling `/api/v1/sensors/`.
  * - Animate numeric value transitions.
  * - Support real-time and hourly aggregated chart views.
+ * - Poll `/api/v1/sensors/stats` for 24h summary statistics.
  *
  * State is stored with `$.data()` for lightweight lifecycle management.
  */
@@ -19,11 +20,13 @@
 
   var DEFAULTS = {
     sensorsUrl: "/api/v1/sensors/",
-    logsUrl: "/api/v1/history/",
-    hourlyUrl: "/api/v1/history/hourly",
+    logsUrl: "/api/v1/sensors/history",
+    hourlyUrl: "/api/v1/sensors/history/hourly",
+    statsUrl: "/api/v1/sensors/stats",
     systemMetricsUrl: "/api/v1/system/metrics",
     pollIntervalMs: 2500,
     systemMetricsPollMs: 5000,
+    statsPollMs: 30000,
     points: 48,
     hourlyHours: 24,
     socketEnabled: true,
@@ -101,9 +104,21 @@
     this.$tempBadge = this.$root.find("#tempChartBadge");
     this.$humidityBadge = this.$root.find("#humidityChartBadge");
 
+    // Sensor stats elements
+    this.$statAvgTemp = this.$root.find("#statAvgTemp");
+    this.$statMinTemp = this.$root.find("#statMinTemp");
+    this.$statMaxTemp = this.$root.find("#statMaxTemp");
+    this.$statAvgHum = this.$root.find("#statAvgHum");
+    this.$statMinHum = this.$root.find("#statMinHum");
+    this.$statMaxHum = this.$root.find("#statMaxHum");
+    this.$statAvgSignal = this.$root.find("#statAvgSignal");
+    this.$statAvgBattery = this.$root.find("#statAvgBattery");
+    this.$statReadingsCount = this.$root.find("#statReadingsCount");
+
     this.pollTimer = null;
     this.hourlyPollTimer = null;
     this.systemMetricsTimer = null;
+    this.statsTimer = null;
     this.socketFallbackTimer = null;
     this.socket = null;
     this.usingSocket = false;
@@ -143,6 +158,10 @@
       self.systemMetricsTimer = window.setInterval(function () {
         self.refreshSystemMetrics();
       }, self.options.systemMetricsPollMs);
+      self.refreshStats();
+      self.statsTimer = window.setInterval(function () {
+        self.refreshStats();
+      }, self.options.statsPollMs);
       self.$root.attr("aria-busy", "false");
     });
   };
@@ -153,7 +172,8 @@
     var self = this;
     $.getJSON(this.options.logsUrl)
       .done(function (logs) {
-        if (!logs || !logs.length) {
+        var items = (logs && logs.items) ? logs.items : logs;
+        if (!items || !items.length) {
           self.history.temp = [];
           self.history.humidity = [];
           if (callback) callback();
@@ -161,7 +181,7 @@
         }
         self.history.temp = [];
         self.history.humidity = [];
-        $.each(logs, function (_, entry) {
+        $.each(items, function (_, entry) {
           self.history.temp.push(coerceNumber(entry.temperature));
           self.history.humidity.push(coerceNumber(entry.humidity));
         });
@@ -449,6 +469,59 @@
     return this;
   };
 
+  /* ── Sensor Stats Polling ─────────────────────────── */
+
+  SensorDashboard.prototype.refreshStats = function () {
+    var self = this;
+    $.getJSON(this.options.statsUrl, { hours: 24 })
+      .done(function (data) {
+        self.updateStats(data);
+      });
+    return this;
+  };
+
+  SensorDashboard.prototype.updateStats = function (data) {
+    if (!data) return this;
+
+    if (data.count !== undefined && this.$statReadingsCount.length) {
+      this.$statReadingsCount.text(data.count);
+    }
+
+    if (data.temperature) {
+      if (this.$statAvgTemp.length) {
+        this.$statAvgTemp.text(data.temperature.avg != null ? data.temperature.avg.toFixed(1) + "°C" : "--");
+      }
+      if (this.$statMinTemp.length) {
+        this.$statMinTemp.text(data.temperature.min != null ? data.temperature.min.toFixed(1) + "°" : "--");
+      }
+      if (this.$statMaxTemp.length) {
+        this.$statMaxTemp.text(data.temperature.max != null ? data.temperature.max.toFixed(1) + "°" : "--");
+      }
+    }
+
+    if (data.humidity) {
+      if (this.$statAvgHum.length) {
+        this.$statAvgHum.text(data.humidity.avg != null ? data.humidity.avg.toFixed(1) + "%" : "--");
+      }
+      if (this.$statMinHum.length) {
+        this.$statMinHum.text(data.humidity.min != null ? data.humidity.min.toFixed(1) + "%" : "--");
+      }
+      if (this.$statMaxHum.length) {
+        this.$statMaxHum.text(data.humidity.max != null ? data.humidity.max.toFixed(1) + "%" : "--");
+      }
+    }
+
+    if (data.signal && this.$statAvgSignal.length) {
+      this.$statAvgSignal.text(data.signal.avg != null ? data.signal.avg.toFixed(1) + "%" : "--");
+    }
+
+    if (data.battery && this.$statAvgBattery.length) {
+      this.$statAvgBattery.text(data.battery.avg != null ? data.battery.avg.toFixed(1) + "%" : "--");
+    }
+
+    return this;
+  };
+
   /* ── Socket.IO ───────────────────────────────────── */
 
   SensorDashboard.prototype.connectSocket = function () {
@@ -602,6 +675,10 @@
     if (this.systemMetricsTimer) {
       window.clearInterval(this.systemMetricsTimer);
       this.systemMetricsTimer = null;
+    }
+    if (this.statsTimer) {
+      window.clearInterval(this.statsTimer);
+      this.statsTimer = null;
     }
     this.clearSocketFallback();
     $(window).off(EVENT_NS);
