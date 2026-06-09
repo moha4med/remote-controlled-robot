@@ -112,55 +112,48 @@
           </div>
         </section>
 
-        <!-- Telemetry Panel -->
-        <section class="dashboard-card dashboard-card--telemetry">
+        <!-- AI Environmental Analysis -->
+        <section class="dashboard-card dashboard-card--ai">
           <div class="dashboard-card__header">
             <div class="d-flex align-items-center gap-2">
-              <i class="bi bi-speedometer2 text-accent"></i>
-              <span class="dashboard-card__title">Core Telemetry</span>
+              <i class="bi bi-cpu text-accent"></i>
+              <span class="dashboard-card__title">AI Environmental Analysis</span>
             </div>
-            <span class="badge bg-bg-panel-raised text-text-secondary border border-border-subtle">Active</span>
+            <span class="badge bg-bg-panel-raised text-text-secondary border border-border-subtle" id="aiStatusBadge">--</span>
           </div>
-          <div class="telemetry-grid">
-            <div class="telemetry-item">
-              <div class="telemetry-item__icon"><i class="bi bi-battery-charging"></i></div>
-              <div class="telemetry-item__body">
-                <span class="telemetry-item__label">Battery</span>
-                <span class="telemetry-item__value" id="batteryValueTel">100%</span>
-              </div>
-              <div class="telemetry-item__bar"><div class="telemetry-item__bar-fill" id="batteryBarFill" style="width:100%"></div></div>
-            </div>
-            <div class="telemetry-item">
-              <div class="telemetry-item__icon"><i class="bi bi-wifi"></i></div>
-              <div class="telemetry-item__body">
-                <span class="telemetry-item__label">Signal</span>
-                <span class="telemetry-item__value" id="signalTel">--%</span>
-              </div>
-              <div class="telemetry-item__bar"><div class="telemetry-item__bar-fill" id="signalBarFill" style="width:0%"></div></div>
-            </div>
-            <div class="telemetry-item">
-              <div class="telemetry-item__icon"><i class="bi bi-thermometer-half"></i></div>
-              <div class="telemetry-item__body">
-                <span class="telemetry-item__label">Temperature</span>
-                <span class="telemetry-item__value" id="tempTel">47°C</span>
-              </div>
-              <div class="telemetry-item__bar"><div class="telemetry-item__bar-fill" style="width:47%"></div></div>
-            </div>
-            <div class="telemetry-item">
-              <div class="telemetry-item__icon"><i class="bi bi-droplet-fill"></i></div>
-              <div class="telemetry-item__body">
-                <span class="telemetry-item__label">Humidity</span>
-                <span class="telemetry-item__value" id="humidityTel">--%</span>
-              </div>
-              <div class="telemetry-item__bar"><div class="telemetry-item__bar-fill" id="humidityBarFill" style="width:0%"></div></div>
-            </div>
-            <div class="telemetry-item">
-              <div class="telemetry-item__icon"><i class="bi bi-gear"></i></div>
-              <div class="telemetry-item__body">
-                <span class="telemetry-item__label">Mode</span>
-                <span class="telemetry-item__value text-accent" id="modeValue">Manual</span>
+          <div class="ai-analysis-grid">
+            <div class="ai-score-wrap">
+              <div class="ai-score-circle">
+                <svg class="ai-score-svg" viewBox="0 0 36 36">
+                  <path class="ai-score-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="ai-score-fill" id="aiScoreCircle" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="0, 100" />
+                </svg>
+                <div class="ai-score-text">
+                  <span class="ai-score-value" id="aiScoreValue">--</span>
+                </div>
               </div>
             </div>
+            <div class="ai-details">
+              <div class="ai-detail-row">
+                <span class="ai-detail-label">Status</span>
+                <span class="ai-detail-value" id="aiDetailStatus">--</span>
+              </div>
+              <div class="ai-detail-row">
+                <span class="ai-detail-label">Risk</span>
+                <span class="ai-detail-value" id="aiDetailRisk">--</span>
+              </div>
+              <div class="ai-detail-row">
+                <span class="ai-detail-label">Temp Trend</span>
+                <span class="ai-detail-value" id="aiDetailTempTrend">--</span>
+              </div>
+              <div class="ai-detail-row">
+                <span class="ai-detail-label">Humidity Trend</span>
+                <span class="ai-detail-value" id="aiDetailHumTrend">--</span>
+              </div>
+            </div>
+          </div>
+          <div class="ai-recommendation" id="aiRecommendation">
+            Loading environmental analysis...
           </div>
         </section>
 

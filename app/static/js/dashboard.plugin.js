@@ -4,6 +4,7 @@
  * Responsibilities:
  * - Poll `/api/v1/status` every 2s for live telemetry.
  * - Poll `/api/v1/system/metrics` every 5s for host metrics.
+ * - Poll `/api/v1/ai/environment` every 10s for AI analysis.
  * - Receive system metrics via SocketIO `system:update` events.
  * - Animate numeric value transitions.
  * - Handle image capture via `/api/v1/captures/`.
@@ -17,11 +18,13 @@
     statusUrl: "/api/v1/status",
     sensorsUrl: "/api/v1/sensors/",
     systemMetricsUrl: "/api/v1/system/metrics",
+    aiEnvironmentUrl: "/api/v1/ai/environment",
     eventsUrl: "/api/v1/events",
     capturesUrl: "/api/v1/captures/",
     pollIntervalMs: 2000,
     systemMetricsPollMs: 5000,
     galleryPollMs: 5000,
+    aiPollMs: 10000,
   };
 
   /* ── Helpers ─────────────────────────────────────── */
@@ -77,15 +80,11 @@
     this.options = $.extend({}, DEFAULTS, options);
 
     // Telemetry elements (camera metrics bar)
-    this.$battery = this.$root.find("#batteryValue, #batteryValueTel");
-    this.$signal = this.$root.find("#signal, #signalTel");
-    this.$temp = this.$root.find("#temp, #tempTel");
-    this.$humidity = this.$root.find("#humidity, #humidityTel");
-    this.$humidityBar = this.$root.find("#humidityBarFill");
-    this.$mode = this.$root.find("#modeValue");
+    this.$battery = this.$root.find("#batteryValue");
+    this.$signal = this.$root.find("#signal");
+    this.$temp = this.$root.find("#temp");
+    this.$humidity = this.$root.find("#humidity");
     this.$timestamp = this.$root.find("#dashboardTimestamp, #camTime");
-    this.$batteryBar = this.$root.find("#batteryBarFill");
-    this.$signalBar = this.$root.find("#signalBarFill");
 
     // System metrics elements
     this.$sysCpu = this.$root.find("#sysCpu");
@@ -107,9 +106,20 @@
     // Quick actions
     this.$actions = this.$root.find("[data-action]");
 
+    // AI Environmental Analysis elements
+    this.$aiScoreValue = this.$root.find("#aiScoreValue");
+    this.$aiScoreCircle = this.$root.find("#aiScoreCircle");
+    this.$aiStatusBadge = this.$root.find("#aiStatusBadge");
+    this.$aiDetailStatus = this.$root.find("#aiDetailStatus");
+    this.$aiDetailRisk = this.$root.find("#aiDetailRisk");
+    this.$aiDetailTempTrend = this.$root.find("#aiDetailTempTrend");
+    this.$aiDetailHumTrend = this.$root.find("#aiDetailHumTrend");
+    this.$aiRecommendation = this.$root.find("#aiRecommendation");
+
     this.timerId = null;
     this.galleryTimerId = null;
     this.systemMetricsTimerId = null;
+    this.aiTimerId = null;
     this.knownCaptureIds = {};
     this.socket = null;
   }
@@ -152,6 +162,12 @@
     this.systemMetricsTimerId = window.setInterval(function () {
       self.refreshSystemMetrics();
     }, this.options.systemMetricsPollMs);
+
+    // Poll AI environmental analysis
+    this.refreshAiAnalysis();
+    this.aiTimerId = window.setInterval(function () {
+      self.refreshAiAnalysis();
+    }, this.options.aiPollMs);
 
     this.$root.attr("aria-busy", "false");
     return this;
@@ -228,6 +244,117 @@
     return this;
   };
 
+  /* ── AI Environmental Analysis ───────────────────── */
+
+  DashboardBoard.prototype.refreshAiAnalysis = function () {
+    var self = this;
+    $.getJSON(this.options.aiEnvironmentUrl)
+      .done(function (data) {
+        self.updateAiAnalysis(data);
+      });
+    return this;
+  };
+
+  DashboardBoard.prototype.updateAiAnalysis = function (data) {
+    if (!data) return this;
+
+    // Score circle
+    var score = coerceNumber(data.score);
+    if (score !== null && this.$aiScoreValue.length) {
+      this.$aiScoreValue.text(score);
+      if (this.$aiScoreCircle.length) {
+        this.$aiScoreCircle.attr("stroke-dasharray", score + ", 100");
+      }
+    } else if (this.$aiScoreValue.length) {
+      this.$aiScoreValue.text("--");
+    }
+
+    // Status badge
+    if (data.status && this.$aiStatusBadge.length) {
+      this.$aiStatusBadge.text(data.status);
+      this.$aiStatusBadge.removeClass("bg-success bg-warning bg-danger bg-secondary");
+      if (data.status === "Optimal") {
+        this.$aiStatusBadge.addClass("bg-success");
+      } else if (data.status === "Warning") {
+        this.$aiStatusBadge.addClass("bg-warning");
+      } else if (data.status === "Critical") {
+        this.$aiStatusBadge.addClass("bg-danger");
+      } else {
+        this.$aiStatusBadge.addClass("bg-secondary");
+      }
+    }
+
+    // Detail fields
+    if (this.$aiDetailStatus.length) {
+      this.$aiDetailStatus.text(data.status || "--");
+    }
+    if (this.$aiDetailRisk.length) {
+      this.$aiDetailRisk.text(data.risk_level || "--");
+    }
+    if (this.$aiDetailTempTrend.length) {
+      this.$aiDetailTempTrend.text(data.temperature_trend || "--");
+    }
+    if (this.$aiDetailHumTrend.length) {
+      this.$aiDetailHumTrend.text(data.humidity_trend || "--");
+    }
+
+    // Recommendation
+    if (data.recommendation && this.$aiRecommendation.length) {
+      this.$aiRecommendation.text(data.recommendation);
+    }
+
+    return this;
+  };
+
+  /* ── Sensor Stats ─────────────────────────────────── */
+
+  DashboardBoard.prototype.refreshSensorStats = function () {
+    var self = this;
+    $.getJSON(this.options.sensorStatsUrl, { hours: 24 })
+      .done(function (data) {
+        self.updateSensorStats(data);
+      });
+    return this;
+  };
+
+  DashboardBoard.prototype.updateSensorStats = function (data) {
+    if (!data || !data.count) return this;
+
+    if (data.temperature) {
+      if (this.$statAvgTemp.length) {
+        this.$statAvgTemp.text((data.temperature.avg != null ? data.temperature.avg + "°C" : "--°C"));
+      }
+      if (this.$statMinTemp.length) {
+        this.$statMinTemp.text(data.temperature.min != null ? data.temperature.min + "°" : "--");
+      }
+      if (this.$statMaxTemp.length) {
+        this.$statMaxTemp.text(data.temperature.max != null ? data.temperature.max + "°" : "--");
+      }
+    }
+
+    if (data.humidity) {
+      if (this.$statAvgHum.length) {
+        this.$statAvgHum.text((data.humidity.avg != null ? data.humidity.avg + "%" : "--%"));
+      }
+      if (this.$statMinHum.length) {
+        this.$statMinHum.text(data.humidity.min != null ? data.humidity.min + "%" : "--");
+      }
+      if (this.$statMaxHum.length) {
+        this.$statMaxHum.text(data.humidity.max != null ? data.humidity.max + "%" : "--");
+      }
+    }
+
+    if (data.signal && this.$statAvgSignal.length) {
+      this.$statAvgSignal.text((data.signal.avg != null ? data.signal.avg + "%" : "--%"));
+    }
+
+    if (this.$statCount.length) {
+      this.$statCount.text(data.count || "--");
+    }
+
+    return this;
+  };
+
   /* ── Telemetry ───────────────────────────────────── */
 
   DashboardBoard.prototype.refresh = function () {
@@ -256,18 +383,9 @@
     if (statusData) {
       if (statusData.battery !== undefined) {
         animateValue(this.$battery, statusData.battery, "%");
-        if (this.$batteryBar.length) {
-          this.$batteryBar.css("width", Math.min(statusData.battery, 100) + "%");
-        }
       }
       if (statusData.signal !== undefined) {
         animateValue(this.$signal, statusData.signal, "%");
-        if (this.$signalBar.length) {
-          this.$signalBar.css("width", Math.min(statusData.signal, 100) + "%");
-        }
-      }
-      if (statusData.mode !== undefined) {
-        this.$mode.text(statusData.mode);
       }
       if (statusData.temp !== undefined) {
         this.$temp.text(statusData.temp + "\u00b0C");
@@ -277,9 +395,6 @@
       var humidity = coerceNumber(sensorData.humidity !== undefined ? sensorData.humidity : null);
       if (humidity !== null) {
         this.$humidity.text(humidity.toFixed(0) + "%");
-        if (this.$humidityBar.length) {
-          this.$humidityBar.css("width", Math.min(humidity, 100) + "%");
-        }
       }
     }
     var timeStr = new Date().toLocaleTimeString();
@@ -423,6 +538,10 @@
     if (this.systemMetricsTimerId) {
       window.clearInterval(this.systemMetricsTimerId);
       this.systemMetricsTimerId = null;
+    }
+    if (this.aiTimerId) {
+      window.clearInterval(this.aiTimerId);
+      this.aiTimerId = null;
     }
     if (this.socket && typeof this.socket.disconnect === "function") {
       this.socket.disconnect();
