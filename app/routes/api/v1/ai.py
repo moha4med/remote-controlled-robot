@@ -1,6 +1,7 @@
 # app/routes/api/v1/ai.py
 # API routes for AI-powered features, including environmental analysis and object detection
 
+import cv2
 from flask import Blueprint, jsonify
 from app.ai.services.environment_service import get_environment_analysis
 from app.ai.detection.detector import ObjectDetector
@@ -19,12 +20,17 @@ def environment():
 
 @ai_bp.route("/detection/latest", methods=["GET"])
 def detect_latest():
-    capture = (Capture.query.order_by(Capture.created_at.desc()).first())
+    capture = Capture.query.order_by(Capture.created_at.desc()).first()
 
     if not capture:
         return jsonify({"error": "No captures found"}), 404
 
-    detections = detector.detect(capture.filepath)
+    frame = cv2.imread(capture.filepath)
+
+    if frame is None:
+        return jsonify({"error": f"Could not read image at {capture.filepath}"}), 500
+
+    detections = detector.detect(frame)
 
     return jsonify({
         "capture": {
