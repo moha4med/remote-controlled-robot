@@ -3,10 +3,12 @@
 
 from flask import Blueprint, jsonify
 from app.ai.services.environment_service import get_environment_analysis
-from app.ai.detection.detector import detector
+from app.ai.detection.detector import ObjectDetector
 from app.models.capture import Capture
 
 ai_bp = Blueprint("ai", __name__, url_prefix="/api/v1/ai")
+
+detector = ObjectDetector()
 
 
 @ai_bp.route("/environment", methods=["GET"])
@@ -17,17 +19,13 @@ def environment():
 
 @ai_bp.route("/detection/latest", methods=["GET"])
 def detect_latest():
-    capture = (
-        Capture.query
-        .order_by(Capture.created_at.desc())
-        .first()
-    )
-    
+    capture = (Capture.query.order_by(Capture.created_at.desc()).first())
+
     if not capture:
         return jsonify({"error": "No captures found"}), 404
-    
+
     detections = detector.detect(capture.filepath)
-    
+
     return jsonify({
         "capture": {
             "capture_id": capture.id,
@@ -37,7 +35,7 @@ def detect_latest():
         },
         "detections": detections
     })
-    
+
 
 @ai_bp.route("/detection/image", methods=["GET"])
 def detect_image():

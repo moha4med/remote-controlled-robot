@@ -1,8 +1,7 @@
-import os
-
 # app/ai/detection/detector.py
 # Singleton object detector using YOLOv8n (NCNN) for efficient inference on Raspberry Pi.
 
+import os
 from ultralytics import YOLO
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -16,14 +15,14 @@ class ObjectDetector:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance.model = None
+            cls._instance.model = None  # don't load yet
         return cls._instance
     
     def load(self):
-        def load(self):
         if self.model is None:
-            print(f"Loading model from {MODEL_PATH}")
+            print(f"Loading YOLOv8n NCNN model from {MODEL_PATH}...")
             self.model = YOLO(MODEL_PATH)
+            print("Model loaded.")
     
     def detect(self, frame):
         self.load()
