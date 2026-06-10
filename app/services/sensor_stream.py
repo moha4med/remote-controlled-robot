@@ -53,7 +53,7 @@ class SensorStreamManager:
         if humidity is None:
             humidity = round(55 + random.uniform(-10, 10), 1)
 
-        battery = round(75 + random.uniform(-5, 5), 1)
+        battery = round(100)
         signal = round(90 + random.uniform(-8, 2), 1)
 
         return {
