@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify
 from app.ai.services.environment_service import get_environment_analysis
 from app.ai.detection.detector import ObjectDetector
 from app.models.capture import Capture
+from app.services.event_capture import check_detection_snapshot
 
 ai_bp = Blueprint("ai", __name__, url_prefix="/api/v1/ai")
 
@@ -40,6 +41,9 @@ def detect_latest():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": f"Detection failed: {str(e)}"}), 500
+
+    # Trigger event-based snapshot if objects detected
+    check_detection_snapshot(detections)
 
     return jsonify({
         "capture": {

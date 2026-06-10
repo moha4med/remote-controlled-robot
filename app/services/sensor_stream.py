@@ -7,6 +7,7 @@ from app.sensors.usb_temp_humidity import USBTempHumiditySensor
 from app.models.sensor_log import SensorLog
 from app.services.robot_service import RobotService
 from app.services.system_service import get_system_metrics
+from app.services.event_capture import check_sensor_snapshot
 
 
 class SensorStreamManager:
@@ -47,7 +48,6 @@ class SensorStreamManager:
             except Exception:
                 pass
 
-        # Fallback simulated values if no hardware
         if temp is None:
             temp = round(22 + random.uniform(-3, 3), 1)
         if humidity is None:
@@ -75,16 +75,24 @@ class SensorStreamManager:
                 signal_strength=data.get("signal"),
                 robot_state=data.get("robot_state"),
             )
-            
             db.session.add(log)
             db.session.commit()
         except Exception:
             db.session.rollback()
 
     def read_and_broadcast(self):
-        """Read sensors, persist, emit via SocketIO."""
+        """Read sensors, persist, emit via SocketIO, check for events."""
         data = self.read_sensors()
         self.persist(data)
+
+        # Check for abnormal sensor readings -> event-based snapshot
+        check_sensor_snapshot({
+            "temperature": data["temperature"],
+            "humidity": data["humidity"],
+            "battery": data["battery"],
+            "signal_strength": data["signal"],
+        })
+
         socketio.emit("sensor:update", {
             "temperature": data["temperature"],
             "humidity": data["humidity"],
@@ -104,12 +112,7 @@ manager = SensorStreamManager()
 
 
 def sensor_loop(app):
-    """Background loop: read sensors, persist, emit every 2.5s.
-    System metrics emitted every 5s.
-    
-    Must be called with the Flask app so DB operations work in the 
-    background thread context.
-    """
+    """Background loop: read sensors, persist, emit every 2.5s."""
     with app.app_context():
         while True:
             try:
