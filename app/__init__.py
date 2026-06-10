@@ -17,6 +17,8 @@ from app.routes.api.v1.users import users_bp
 from app.routes.api.v1.settings import settings_bp
 from app.routes.api.v1.system import system_bp
 from app.routes.api.v1.ai import ai_bp
+from app.routes.api.v1.latency import latency_bp
+from app.routes.api.v1.logs import logs_bp
 
 from app.routes.control import control_bp
 from app.routes.dashboard import dashboard_bp
@@ -58,10 +60,37 @@ def create_app():
     @app.route("/api/v1/health", methods=["GET"])
     @limiter.limit("60/minute")
     def health_check():
+        from app.services.sensor_stream import manager as sensor_manager
+        from app.services.latency_monitor import monitor as latency_monitor
+        from app.services.data_logger import data_logger as logger
+
+        sensor_health = sensor_manager.get_health()
+        latency_stats = latency_monitor.get_current_stats(window_seconds=60)
+        log_stats = logger.get_stats(hours=1)
+
+        # Determine overall status
+        issues = []
+        if sensor_health["consecutive_db_errors"] > 5:
+            issues.append("High consecutive DB errors")
+        if sensor_health["buffered_writes"] > 50:
+            issues.append("Large write buffer backlog")
+        if latency_stats.get("avg_ms") and latency_stats["avg_ms"] > 1000:
+            issues.append("High average latency")
+
+        overall_status = "ok" if not issues else "degraded"
+
         return jsonify({
-            "status": "ok",
+            "status": overall_status,
             "service": "robot-control-api",
             "version": "1.0.0",
+            "issues": issues,
+            "sensor_stream": sensor_health,
+            "latency": {
+                "avg_ms": latency_stats.get("avg_ms"),
+                "p95_ms": latency_stats.get("p95_ms"),
+                "current_ms": latency_stats.get("current_ms"),
+            },
+            "logs_last_hour": log_stats,
         })
 
     # API v1 routes
@@ -76,12 +105,18 @@ def create_app():
     app.register_blueprint(settings_bp)
     app.register_blueprint(system_bp)
     app.register_blueprint(ai_bp)
+    app.register_blueprint(latency_bp)
+    app.register_blueprint(logs_bp)
 
     # HTML frontend routes
     app.register_blueprint(control_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(sensors_page_bp)
     app.register_blueprint(captures_page_bp)
+
+    # Register latency tracking middleware
+    from app.middleware.latency import register_latency_middleware
+    register_latency_middleware(app)
 
     with app.app_context():
         db.create_all()
