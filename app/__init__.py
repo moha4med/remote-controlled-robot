@@ -12,6 +12,7 @@ from app.routes.api.v1.sensors import sensors_bp
 from app.routes.api.v1.robot import robot_bp
 from app.routes.api.v1.status import status_bp
 from app.routes.api.v1.captures import captures_bp
+from app.routes.api.v1.snapshots import snapshots_bp
 from app.routes.api.v1.users import users_bp
 from app.routes.api.v1.settings import settings_bp
 from app.routes.api.v1.system import system_bp
@@ -70,6 +71,7 @@ def create_app():
     app.register_blueprint(robot_bp)
     app.register_blueprint(status_bp)
     app.register_blueprint(captures_bp)
+    app.register_blueprint(snapshots_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(system_bp)
