@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from app.extensions import db, socketio
 from app.models.snapshot import Snapshot
 from app.sensors.camera import camera
+from app.services.data_logger import data_logger
 
 # Thresholds for event-based capture
 THRESHOLDS = {
@@ -141,17 +142,40 @@ def check_sensor_snapshot(sensor_data):
 def check_detection_snapshot(detections):
     """Trigger snapshot when objects are detected by the AI detector."""
     if not detections:
+        data_logger.debug(
+            "check_detection_snapshot: no detections, skipping",
+            component="event_capture"
+        )
         return
 
     high_conf = [d for d in detections if d.get("confidence", 0) > 0.6]
+    data_logger.debug(
+        f"check_detection_snapshot: {len(detections)} total detections, "
+        f"{len(high_conf)} high-confidence (>0.6)",
+        component="event_capture"
+    )
+
     if not high_conf:
+        data_logger.debug(
+            "check_detection_snapshot: no high-confidence detections, skipping",
+            component="event_capture"
+        )
         return
 
     event_type = "object_detected"
     if _is_on_cooldown(event_type):
+        data_logger.debug(
+            f"check_detection_snapshot: '{event_type}' on cooldown, skipping",
+            component="event_capture"
+        )
         return
 
     labels = ", ".join(d["label"] for d in high_conf)
+    data_logger.info(
+        f"check_detection_snapshot: triggering snapshot for '{labels}' "
+        f"({len(high_conf)} objects)",
+        component="event_capture"
+    )
     _save_event_snapshot("detection", event_type, f"Detected: {labels}",
                          {"detections": detections})
     _set_cooldown(event_type)
