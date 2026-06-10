@@ -28,27 +28,23 @@ from app.ai.detection.detector import ObjectDetector
 def create_app():
     app = Flask(__name__)
 
-    CORS(app, supports_credentials=True, origins=[
-        "http://localhost:3000",
-        "http://192.168.4.100:3000",
-        "http://192.168.4.101:3000",
-        "http://192.168.4.108:3000",
-        "http://100.68.175.89:3000",
-        "*"
-    ])
+    CORS(app,
+         supports_credentials=True,
+         origins=[
+             "http://localhost:3000", "http://192.168.4.100:3000",
+             "http://192.168.4.101:3000", "http://192.168.4.108:3000",
+             "http://100.68.175.89:3000", "*"
+         ])
 
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-        "DATABASE_URL", "sqlite:///robot.db"
-    )
+        "DATABASE_URL", "sqlite:///robot.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     app.config["JWT_SECRET_KEY"] = os.environ.get(
         "JWT_SECRET_KEY",
-        "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6"
-    )
-    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = int(os.environ.get(
-        "JWT_ACCESS_TOKEN_EXPIRES", 86400
-    ))
+        "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6")
+    app.config["JWT_ACCESS_TOKEN_EXPIRES"] = int(
+        os.environ.get("JWT_ACCESS_TOKEN_EXPIRES", 86400))
 
     db.init_app(app)
     jwt.init_app(app)
@@ -84,11 +80,11 @@ def create_app():
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(sensors_page_bp)
     app.register_blueprint(captures_page_bp)
-    
-    detector = ObjectDetector()
-    detector.load() 
 
     with app.app_context():
         db.create_all()
+
+    detector = ObjectDetector()
+    detector.load()
 
     return app
