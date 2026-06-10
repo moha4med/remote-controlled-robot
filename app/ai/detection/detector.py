@@ -8,6 +8,9 @@ BASE_DIR = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 MODEL_PATH = os.path.join(BASE_DIR, "yolov8n.onnx")
 
+# Maximum image dimension to prevent OOM on Raspberry Pi
+MAX_DIMENSION = 1280
+
 
 class ObjectDetector:
     _instance = None
@@ -80,8 +83,22 @@ class ObjectDetector:
             self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
             print("Model loaded successfully.")
 
+    def _resize_if_needed(self, frame):
+        """Resize frame if it exceeds MAX_DIMENSION to prevent OOM."""
+        h, w = frame.shape[:2]
+        max_dim = max(h, w)
+        if max_dim > MAX_DIMENSION:
+            scale = MAX_DIMENSION / max_dim
+            new_w = int(w * scale)
+            new_h = int(h * scale)
+            frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        return frame
+
     def detect(self, frame, conf_threshold=0.35, nms_threshold=0.4):
         self.load()
+
+        # Resize large frames to prevent memory issues on Raspberry Pi
+        frame = self._resize_if_needed(frame)
 
         orig_h, orig_w = frame.shape[:2]
 

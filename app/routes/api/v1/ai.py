@@ -2,6 +2,7 @@
 # API routes for AI-powered features, including environmental analysis and object detection
 
 import cv2
+import traceback
 from flask import Blueprint, jsonify
 from app.ai.services.environment_service import get_environment_analysis
 from app.ai.detection.detector import ObjectDetector
@@ -30,7 +31,15 @@ def detect_latest():
     if frame is None:
         return jsonify({"error": f"Could not read image at {capture.filepath}"}), 500
 
-    detections = detector.detect(frame)
+    try:
+        detections = detector.detect(frame)
+    except MemoryError:
+        return jsonify({
+            "error": "Out of memory during inference. Try a smaller image or restart the service."
+        }), 503
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": f"Detection failed: {str(e)}"}), 500
 
     return jsonify({
         "capture": {
