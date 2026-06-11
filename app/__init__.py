@@ -25,8 +25,6 @@ from app.routes.dashboard import dashboard_bp
 from app.routes.sensors import sensors_page_bp
 from app.routes.captures import captures_page_bp
 
-from app.ai.detection.detector import ObjectDetector
-
 
 def create_app():
     app = Flask(__name__)
@@ -120,8 +118,5 @@ def create_app():
 
     with app.app_context():
         db.create_all()
-
-    detector = ObjectDetector()
-    detector.load()
 
     return app
