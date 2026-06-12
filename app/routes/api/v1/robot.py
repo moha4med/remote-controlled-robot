@@ -31,7 +31,9 @@ def move():
         robot.stop()
 
     return jsonify({
-        "status": "ok",
-        "direction": direction,
-        "state": robot.state,
+        "status": "success",
+        "data": {
+            "direction": direction,
+            "state": robot.state,
+        }
     })

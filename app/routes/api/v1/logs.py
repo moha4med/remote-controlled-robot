@@ -23,8 +23,11 @@ def get_logs():
         level=level, component=component, limit=limit, hours=hours
     )
     return jsonify({
-        "count": len(entries),
-        "items": entries,
+        "status": "success",
+        "data": {
+            "count": len(entries),
+            "items": entries,
+        }
     })
 
 
@@ -46,7 +49,10 @@ def prune_logs():
     max_age = min(max(max_age, 1), 720)
     deleted = data_logger.prune(max_age_hours=max_age)
     return jsonify({
-        "status": "ok",
-        "deleted": deleted,
-        "max_age_hours": max_age,
+        "status": "success",
+        "data": {
+            "status": "ok",
+            "deleted": deleted,
+            "max_age_hours": max_age,
+        }
     })

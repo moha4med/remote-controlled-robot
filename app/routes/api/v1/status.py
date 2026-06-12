@@ -40,9 +40,10 @@ def _get_wifi_signal_strength():
 
     try:
         # Fallback: try iwconfig
-        result = subprocess.run(
-            ["iwconfig"], capture_output=True, text=True, timeout=5
-        )
+        result = subprocess.run(["iwconfig"],
+                                capture_output=True,
+                                text=True,
+                                timeout=5)
         # Look for "Signal level=-45 dBm" or "Quality=70/70"
         m = re.search(r"Signal level[=:]\s*(-?\d+)\s*dBm", result.stdout)
         if m:
@@ -64,11 +65,7 @@ def _get_wifi_signal_strength():
 # @jwt_required_role("operator")
 def get_status():
     """Return a combined status snapshot."""
-    latest = (
-        SensorLog.query
-        .order_by(SensorLog.recorded_at.desc())
-        .first()
-    )
+    latest = (SensorLog.query.order_by(SensorLog.recorded_at.desc()).first())
 
     # Try to get real WiFi signal strength
     wifi_signal = _get_wifi_signal_strength()
@@ -86,7 +83,8 @@ def get_status():
     if latest:
         # Robot is USB-powered — no real battery; keep at 100%
         # unless sensor log explicitly reports a value
-        payload["battery"] = round(latest.battery) if latest.battery is not None else 100
+        payload["battery"] = round(
+            latest.battery) if latest.battery is not None else 100
         # Use sensor log signal_strength if available, else use WiFi reading
         if latest.signal_strength is not None:
             payload["signal"] = round(latest.signal_strength)
@@ -118,4 +116,10 @@ def post_event():
     else:
         robot.stop()
 
-    return jsonify({"status": "ok", "action": action, "robot_state": robot.state})
+    return jsonify({
+        "status": "success",
+        "data": {
+            "action": action,
+            "robot_state": robot.state
+        }
+    })

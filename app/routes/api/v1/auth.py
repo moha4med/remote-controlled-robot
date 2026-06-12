@@ -24,10 +24,10 @@ def login():
     user = User.query.filter_by(username=username).first()
 
     if not user:
-        return jsonify({"message": "User not found"}), 404
+        return jsonify({"status": "error", "message": "User not found"}), 404
 
     if not bcrypt.check_password_hash(user.password_hash, data["password"]):
-        return jsonify({"message": "Invalid credentials"}), 401
+        return jsonify({"status": "error", "message": "Invalid credentials"}), 401
 
     remember_me = data.get("remember_me", False)
     expires = timedelta(days=30) if remember_me else timedelta(hours=1)
@@ -36,16 +36,19 @@ def login():
     refresh_token = create_refresh_token(identity=str(user.id))
 
     return jsonify({
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "role": user.role,
-            "is_active": user.is_active,
+        "status": "success",
+        "data": {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "role": user.role,
+                "is_active": user.is_active,
+            },
         },
     })
 
@@ -59,20 +62,23 @@ def refresh():
     user = User.query.get(user_id)
 
     if not user or not user.is_active:
-        return jsonify({"message": "User not found or inactive"}), 401
+        return jsonify({"status": "error", "message": "User not found or inactive"}), 401
 
     new_access_token = create_access_token(identity=str(user.id))
 
     return jsonify({
-        "access_token": new_access_token,
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "role": user.role,
-            "is_active": user.is_active,
+        "status": "success",
+        "data": {
+            "access_token": new_access_token,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "role": user.role,
+                "is_active": user.is_active,
+            },
         },
     })
 
@@ -102,4 +108,4 @@ def me():
 @auth_bp.route("/logout", methods=["POST"])
 @limiter.limit("10/minute")
 def logout():
-    return jsonify({"message": "Logged out successfully"})
+    return jsonify({"status": "success", "message": "Logged out successfully"})
