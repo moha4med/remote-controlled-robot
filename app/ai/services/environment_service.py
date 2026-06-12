@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 
 from app.ai.environmental.analyzer import analyze
 from app.models.sensor_log import SensorLog
+from app.ai.agriculture.risk_assessor import assess_agricultural_risk
+from app.ai.prediction.predictor import get_environment_prediction
 
 
 def get_environment_analysis():
@@ -80,3 +82,22 @@ def get_environment_analysis():
     result["last_reading_at"] = last_reading_at
     result["data_quality"] = data_quality
     return result
+
+
+def get_agricultural_risk():
+    # a function that fetches current data, runs prediction, then runs risk assessment. Add the endpoint:
+    
+    # Fetch current data and trends
+    analysis = get_environment_analysis()
+    temp = analysis.get("temperature")
+    humidity = analysis.get("humidity")
+    temp_trend = analysis.get("temperature_trend")
+    humidity_trend = analysis.get("humidity_trend")
+
+    # Run prediction
+    prediction = get_environment_prediction(hours_ahead=6)  # Predict 6 hours ahead
+    
+    # Run risk assessment
+    risk_level = assess_agricultural_risk(temp, humidity, temp_trend, humidity_trend, prediction)
+
+    return risk_level
