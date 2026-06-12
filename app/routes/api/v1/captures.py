@@ -75,11 +75,14 @@ def list_captures():
     base_url = _get_base_url()
 
     response = make_response(jsonify({
-        "items": [c.to_dict(base_url=base_url) for c in captures],
-        "total": total,
-        "page": page,
-        "per_page": per_page,
-        "total_pages": total_pages,
+        "status": "success",
+        "data": {
+            "items": [c.to_dict(base_url=base_url) for c in captures],
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+        }
     }))
     return _add_cors(response)
 
@@ -102,7 +105,7 @@ def trigger_capture():
     db.session.commit()
 
     base_url = _get_base_url()
-    response = make_response(jsonify(capture.to_dict(base_url=base_url)), 201)
+    response = make_response(jsonify({"status": "success", "data": capture.to_dict(base_url=base_url)}), 201)
     return _add_cors(response)
 
 
@@ -128,7 +131,7 @@ def delete_capture(capture_id):
     db.session.delete(capture)
     db.session.commit()
 
-    response = make_response(jsonify({"message": "Capture deleted", "id": capture_id}), 200)
+    response = make_response(jsonify({"status": "success", "message": "Capture deleted", "id": capture_id}), 200)
     return _add_cors(response)
 
 
@@ -215,7 +218,7 @@ def get_capture(capture_id):
     else:
         data["sensor"] = None
 
-    response = make_response(jsonify(data))
+    response = make_response(jsonify({"status": "success", "data": data}))
     return _add_cors(response)
 
 
@@ -226,8 +229,8 @@ def latest_capture():
     """Return the most recent capture record."""
     capture = Capture.query.order_by(Capture.created_at.desc()).first()
     if not capture:
-        response = make_response(jsonify({"message": "No captures yet"}), 404)
+        response = make_response(jsonify({"status": "error", "message": "No captures yet"}), 404)
         return _add_cors(response)
     base_url = _get_base_url()
-    response = make_response(jsonify(capture.to_dict(base_url=base_url)))
+    response = make_response(jsonify({"status": "success", "data": capture.to_dict(base_url=base_url)}), 200)
     return _add_cors(response)
