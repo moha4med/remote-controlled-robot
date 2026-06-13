@@ -19,6 +19,7 @@ from app.routes.api.v1.system import system_bp
 from app.routes.api.v1.ai import ai_bp
 from app.routes.api.v1.latency import latency_bp
 from app.routes.api.v1.logs import logs_bp
+from app.routes.api.v1.crops import crops_bp
 
 from app.routes.control import control_bp
 from app.routes.dashboard import dashboard_bp
@@ -105,7 +106,8 @@ def create_app():
     app.register_blueprint(ai_bp)
     app.register_blueprint(latency_bp)
     app.register_blueprint(logs_bp)
-
+    app.register_blueprint(crops_bp)
+    
     # HTML frontend routes
     app.register_blueprint(control_bp)
     app.register_blueprint(dashboard_bp)

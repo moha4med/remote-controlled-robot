@@ -18,7 +18,10 @@ def list_users():
     
     return jsonify({
         "status": "success",
-        "data": [u.to_dict() for u in users],
+        "data": {
+            "users": [u.to_dict() for u in users],
+            "total": len(users),
+        },
     })
 
 
