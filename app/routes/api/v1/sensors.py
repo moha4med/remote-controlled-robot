@@ -26,6 +26,7 @@ def environment():
             },
             "message": "No sensor data available"
         }), 404
+        
     return jsonify({"status": "success", "data": latest.to_dict()})
 
 

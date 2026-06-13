@@ -21,6 +21,7 @@ def get_preferences():
     user = User.query.get_or_404(user_id)
 
     prefs = Setting.get_user_preferences(user_id)
+    
     return jsonify({
         "status": "success",
         "data": prefs,
@@ -47,6 +48,7 @@ def update_preferences():
     db.session.commit()
 
     prefs = Setting.get_user_preferences(user_id)
+    
     return jsonify({
         "status": "success",
         "message": "Preferences updated",
@@ -108,6 +110,7 @@ def get_system_config():
         return jsonify({"status": "error", "message": "Admin access required"}), 403
 
     configs = Setting.get_all_system()
+    
     return jsonify({"status": "success", "data": configs})
 
 

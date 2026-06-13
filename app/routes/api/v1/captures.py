@@ -2,6 +2,7 @@
 # API for camera capture listing, trigger, delete, and file serving
 
 import os
+from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, send_file, request, make_response
 from app.sensors.camera import camera, BASE_DIR
 from app.extensions import db, limiter
@@ -12,6 +13,8 @@ captures_bp = Blueprint("captures", __name__, url_prefix="/api/v1/captures")
 
 CAPTURES_DIR = os.path.join(BASE_DIR, "app", "static", "captures")
 
+
+# ── Helpers
 
 def _get_base_url():
     """Build the base URL from the request, respecting reverse proxies."""
@@ -28,6 +31,14 @@ def _add_cors(response):
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     return response
 
+
+def _json_response(body, status_code=200):
+    """Create a CORS-enabled JSON response."""
+    response = make_response(jsonify(body), status_code)
+    return _add_cors(response)
+
+
+# ── Routes
 
 @captures_bp.route("/", methods=["GET"])
 @limiter.limit("30/minute")
@@ -47,17 +58,15 @@ def list_captures():
 
     if date_from:
         try:
-            from datetime import datetime
-            df = datetime.fromisoformat(date_from)
-            query = query.filter(Capture.created_at >= df)
+            query = query.filter(
+                Capture.created_at >= datetime.fromisoformat(date_from)
+            )
         except ValueError:
             pass
 
     if date_to:
         try:
-            from datetime import datetime, timedelta
-            dt = datetime.fromisoformat(date_to)
-            dt = dt + timedelta(days=1)
+            dt = datetime.fromisoformat(date_to) + timedelta(days=1)
             query = query.filter(Capture.created_at < dt)
         except ValueError:
             pass
@@ -74,7 +83,7 @@ def list_captures():
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
     base_url = _get_base_url()
 
-    response = make_response(jsonify({
+    return _json_response({
         "status": "success",
         "data": {
             "items": [c.to_dict(base_url=base_url) for c in captures],
@@ -83,14 +92,13 @@ def list_captures():
             "per_page": per_page,
             "total_pages": total_pages,
         }
-    }))
-    return _add_cors(response)
+    })
 
 
 @captures_bp.route("/", methods=["POST"])
 @limiter.limit("10/minute")
 def trigger_capture():
-    """Capture an image, persist metadata to DB, return the record. Auth required."""
+    """Capture an image, persist metadata to DB, return the record."""
     result = camera.capture_image()
 
     capture = Capture(
@@ -105,15 +113,19 @@ def trigger_capture():
     db.session.commit()
 
     base_url = _get_base_url()
-    response = make_response(jsonify({"status": "success", "data": capture.to_dict(base_url=base_url)}), 201)
-    return _add_cors(response)
+
+    return _json_response({
+        "status": "success",
+        "message": "Capture created successfully",
+        "data": capture.to_dict(base_url=base_url),
+    }, 201)
 
 
 @captures_bp.route("/<int:capture_id>", methods=["DELETE"])
 # @jwt_required_role("operator")
 @limiter.limit("10/minute")
 def delete_capture(capture_id):
-    """Delete a capture record and its associated files. Auth required."""
+    """Delete a capture record and its associated files."""
     capture = Capture.query.get_or_404(capture_id)
 
     try:
@@ -131,8 +143,11 @@ def delete_capture(capture_id):
     db.session.delete(capture)
     db.session.commit()
 
-    response = make_response(jsonify({"status": "success", "message": "Capture deleted", "id": capture_id}), 200)
-    return _add_cors(response)
+    return _json_response({
+        "status": "success",
+        "message": "Capture deleted successfully",
+        "data": {"id": capture_id},
+    })
 
 
 @captures_bp.route("/file/<path:filename>")
@@ -141,12 +156,13 @@ def delete_capture(capture_id):
 def serve_file(filename):
     """Serve a full-resolution capture image with CORS headers."""
     safe_path = os.path.join(CAPTURES_DIR, filename)
+
     if not os.path.realpath(safe_path).startswith(os.path.realpath(CAPTURES_DIR)):
-        response = make_response(jsonify({"error": "Invalid path"}), 403)
-        return _add_cors(response)
+        return _json_response({"status": "error", "message": "Invalid path"}, 403)
+
     if not os.path.exists(safe_path):
-        response = make_response(jsonify({"error": "File not found"}), 404)
-        return _add_cors(response)
+        return _json_response({"status": "error", "message": "File not found"}, 404)
+
     response = make_response(send_file(safe_path, mimetype="image/jpeg"))
     return _add_cors(response)
 
@@ -159,12 +175,13 @@ def serve_thumbnail(filename):
     thumb_dir = os.path.join(CAPTURES_DIR, "thumbs")
     thumb_filename = f"thumb_{filename.replace('capture_', '')}"
     safe_path = os.path.join(thumb_dir, thumb_filename)
+
     if not os.path.realpath(safe_path).startswith(os.path.realpath(CAPTURES_DIR)):
-        response = make_response(jsonify({"error": "Invalid path"}), 403)
-        return _add_cors(response)
+        return _json_response({"status": "error", "message": "Invalid path"}, 403)
+
     if not os.path.exists(safe_path):
-        response = make_response(jsonify({"error": "Thumbnail not found"}), 404)
-        return _add_cors(response)
+        return _json_response({"status": "error", "message": "Thumbnail not found"}, 404)
+
     response = make_response(send_file(safe_path, mimetype="image/jpeg"))
     return _add_cors(response)
 
@@ -174,14 +191,11 @@ def serve_thumbnail(filename):
 def get_capture(capture_id):
     """Return a single capture with sensor data from the moment it was taken."""
     from app.models.sensor_log import SensorLog
-    from sqlalchemy import func
 
     capture = Capture.query.get_or_404(capture_id)
     base_url = _get_base_url()
     data = capture.to_dict(base_url=base_url)
 
-    # Find the closest sensor reading to the capture time
-    # First try: reading just before or at capture time
     sensor_before = (
         SensorLog.query
         .filter(SensorLog.recorded_at <= capture.created_at)
@@ -189,7 +203,6 @@ def get_capture(capture_id):
         .first()
     )
 
-    # Second try: reading just after capture time
     sensor_after = (
         SensorLog.query
         .filter(SensorLog.recorded_at > capture.created_at)
@@ -197,7 +210,6 @@ def get_capture(capture_id):
         .first()
     )
 
-    # Pick the closest one
     sensor = sensor_before
     if sensor_after and sensor_before:
         diff_before = abs((capture.created_at - sensor_before.recorded_at).total_seconds())
@@ -207,19 +219,15 @@ def get_capture(capture_id):
     elif sensor_after and not sensor_before:
         sensor = sensor_after
 
-    if sensor:
-        data["sensor"] = {
-            "temperature": sensor.temperature,
-            "humidity": sensor.humidity,
-            "battery": sensor.battery,
-            "signal_strength": sensor.signal_strength,
-            "recorded_at": sensor.recorded_at.isoformat() if sensor.recorded_at else None,
-        }
-    else:
-        data["sensor"] = None
+    data["sensor"] = {
+        "temperature": sensor.temperature,
+        "humidity": sensor.humidity,
+        "battery": sensor.battery,
+        "signal_strength": sensor.signal_strength,
+        "recorded_at": sensor.recorded_at.isoformat() if sensor.recorded_at else None,
+    } if sensor else None
 
-    response = make_response(jsonify({"status": "success", "data": data}))
-    return _add_cors(response)
+    return _json_response({"status": "success", "data": data})
 
 
 @captures_bp.route("/latest", methods=["GET"])
@@ -228,9 +236,13 @@ def get_capture(capture_id):
 def latest_capture():
     """Return the most recent capture record."""
     capture = Capture.query.order_by(Capture.created_at.desc()).first()
+
     if not capture:
-        response = make_response(jsonify({"status": "error", "message": "No captures yet"}), 404)
-        return _add_cors(response)
+        return _json_response({"status": "error", "message": "No captures yet"}, 404)
+
     base_url = _get_base_url()
-    response = make_response(jsonify({"status": "success", "data": capture.to_dict(base_url=base_url)}), 200)
-    return _add_cors(response)
+
+    return _json_response({
+        "status": "success",
+        "data": capture.to_dict(base_url=base_url),
+    })

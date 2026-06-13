@@ -15,6 +15,7 @@ users_bp = Blueprint("users", __name__, url_prefix="/api/v1/users")
 def list_users():
     """Return all users."""
     users = User.query.order_by(User.created_at.desc()).all()
+    
     return jsonify({
         "status": "success",
         "data": [u.to_dict() for u in users],
@@ -27,6 +28,7 @@ def list_users():
 def get_user(user_id):
     """Return a single user by ID."""
     user = User.query.get_or_404(user_id)
+    
     return jsonify({
         "status": "success",
         "data": user.to_dict(),
@@ -130,5 +132,5 @@ def delete_user(user_id):
     return jsonify({
         "status": "success",
         "message": "User deleted successfully",
-        "id": user_id,
+        "data": { "id": user_id },
     })

@@ -12,7 +12,8 @@ ai_bp = Blueprint("ai", __name__, url_prefix="/api/v1/ai")
 @ai_bp.route("/environment", methods=["GET"])
 def environment():
     analysis = get_environment_analysis()
-    return jsonify(analysis)
+    
+    return jsonify({"status": "success", "data": analysis})
 
 
 @ai_bp.route("/prediction", methods=["GET"])
@@ -20,10 +21,12 @@ def ai_prediction():
     hours = request.args.get("hours", 1, type=int)
     hours = max(1, min(24, hours))  # Clamp to 1-24 hours
     prediction = get_environment_prediction(hours_ahead=hours)
-    return jsonify(prediction)
+    
+    return jsonify({"status": "success", "data": prediction})
 
 
 @ai_bp.route("/agriculture/risk", methods=["GET"])
 def ai_agriculture_risk():
     result = get_agricultural_risk()
-    return jsonify(result)
+    
+    return jsonify({"status": "success", "data": result})

@@ -15,7 +15,8 @@ def get_latency_stats():
     window = request.args.get("window", 60, type=int)
     window = min(max(window, 10), 600)
     stats = monitor.get_current_stats(window_seconds=window)
-    return jsonify(stats)
+    
+    return jsonify({"status": "success", "data": stats})
 
 
 @latency_bp.route("/history", methods=["GET"])
@@ -27,7 +28,8 @@ def get_latency_history():
     bucket_ms = request.args.get("bucket_ms", 5000, type=int)
     bucket_ms = min(max(bucket_ms, 1000), 60000)
     history = monitor.get_history(window_seconds=window, bucket_ms=bucket_ms)
-    return jsonify(history)
+    
+    return jsonify({"status": "success", "data": history})
 
 
 @latency_bp.route("/categories", methods=["GET"])
@@ -37,4 +39,5 @@ def get_latency_categories():
     window = request.args.get("window", 60, type=int)
     window = min(max(window, 10), 600)
     breakdown = monitor.get_category_breakdown(window_seconds=window)
-    return jsonify(breakdown)
+    
+    return jsonify({"status": "success", "data": breakdown})

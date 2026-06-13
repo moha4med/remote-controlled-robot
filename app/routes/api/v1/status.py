@@ -67,7 +67,7 @@ def get_status():
     """Return a combined status snapshot."""
     latest = (SensorLog.query.order_by(SensorLog.recorded_at.desc()).first())
 
-    # Try to get real WiFi signal strength
+    # Get real WiFi signal strength
     wifi_signal = _get_wifi_signal_strength()
 
     payload = {
@@ -93,7 +93,7 @@ def get_status():
         payload["humidity"] = latest.humidity
         payload["state"] = latest.robot_state or robot.state
 
-    return jsonify(payload)
+    return jsonify({"status": "success", "data": payload})
 
 
 @status_bp.route("/events", methods=["POST"])

@@ -12,4 +12,6 @@ system_bp = Blueprint("system", __name__, url_prefix="/api/v1/system")
 @limiter.limit("30/minute")
 def metrics():
     """Return current system metrics."""
-    return jsonify(get_system_metrics())
+    metrics = get_system_metrics()
+    
+    return jsonify({"status": "success", "data": metrics})

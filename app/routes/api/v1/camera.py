@@ -13,11 +13,6 @@ camera_bp = Blueprint(
 )
 
 
-@camera_bp.route("/")
-def index():
-    return render_template('control.html')
-
-
 @camera_bp.route("/video_feed")
 @limiter.limit("30/minute")
 # @jwt_required_role("operator")

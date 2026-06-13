@@ -22,6 +22,7 @@ def get_logs():
     entries = data_logger.get_recent(
         level=level, component=component, limit=limit, hours=hours
     )
+    
     return jsonify({
         "status": "success",
         "data": {
@@ -38,7 +39,8 @@ def get_log_stats():
     hours = request.args.get("hours", 24, type=int)
     hours = min(max(hours, 1), 168)
     stats = data_logger.get_stats(hours=hours)
-    return jsonify(stats)
+    
+    return jsonify({"status": "success", "data": stats})
 
 
 @logs_bp.route("/prune", methods=["POST"])
@@ -48,10 +50,10 @@ def prune_logs():
     max_age = request.args.get("max_age_hours", 168, type=int)
     max_age = min(max(max_age, 1), 720)
     deleted = data_logger.prune(max_age_hours=max_age)
+    
     return jsonify({
         "status": "success",
         "data": {
-            "status": "ok",
             "deleted": deleted,
             "max_age_hours": max_age,
         }

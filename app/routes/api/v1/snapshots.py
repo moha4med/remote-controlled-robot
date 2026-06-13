@@ -13,10 +13,11 @@ from datetime import datetime
 snapshots_bp = Blueprint("snapshots", __name__, url_prefix="/api/v1/snapshots")
 
 SNAPSHOTS_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))),
-    "app", "static", "snapshots"
-)
+    os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.dirname(__file__)))), "app", "static", "snapshots")
 
+
+# ── Helpers
 
 def _get_base_url():
     scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
@@ -25,12 +26,23 @@ def _get_base_url():
 
 
 def _add_cors(response):
-    response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+    response.headers["Access-Control-Allow-Origin"] = request.headers.get(
+        "Origin", "*")
     response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers[
+        "Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
+    response.headers[
+        "Access-Control-Allow-Headers"] = "Content-Type, Authorization"
     return response
 
+
+def _json_response(body, status_code=200):
+    """Create a CORS-enabled JSON response."""
+    response = make_response(jsonify(body), status_code)
+    return _add_cors(response)
+
+
+# ── Routes
 
 @snapshots_bp.route("/", methods=["GET"])
 @limiter.limit("30/minute")
@@ -51,15 +63,12 @@ def list_snapshots():
         query = query.filter_by(event_type=event_type)
     if date_from:
         try:
-            df = datetime.fromisoformat(date_from)
-            query = query.filter(Snapshot.created_at >= df)
+            query = query.filter(Snapshot.created_at >= datetime.fromisoformat(date_from))
         except ValueError:
             pass
     if date_to:
         try:
-            dt = datetime.fromisoformat(date_to)
-            from datetime import timedelta
-            dt = dt + timedelta(days=1)
+            dt = datetime.fromisoformat(date_to) + timedelta(days=1)
             query = query.filter(Snapshot.created_at < dt)
         except ValueError:
             pass
@@ -76,40 +85,31 @@ def list_snapshots():
     total_pages = (total + per_page - 1) // per_page if total > 0 else 1
     base_url = _get_base_url()
 
-    response = make_response(jsonify({
-        "items": [s.to_dict(base_url=base_url) for s in snapshots],
-        "total": total,
-        "page": page,
-        "per_page": per_page,
-        "total_pages": total_pages,
-    }))
-    return _add_cors(response)
+    return _json_response({
+        "status": "success",
+        "data": {
+            "items": [s.to_dict(base_url=base_url) for s in snapshots],
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+        }
+    })
 
 
 @snapshots_bp.route("/", methods=["POST"])
 @limiter.limit("20/minute")
 def create_snapshot():
-    """Capture a snapshot from the live stream and save to disk.
-
-    Accepts optional JSON body:
-        - source: "manual" | "event" | "detection" (default: "manual")
-        - event_type: string description (e.g. "high_temperature", "object_detected")
-        - context: JSON-serializable dict with extra context
-    """
+    """Capture a snapshot from the live stream and save to disk."""
     data = request.json or {}
     source = data.get("source", "manual")
     event_type = data.get("event_type", None)
     context = data.get("context", None)
 
-    # Validate source
     if source not in ("manual", "event", "detection"):
         source = "manual"
 
-    # Capture frame from camera
-    result = camera.capture_image(jpeg_quality=85)
-
-    # Override filename to use snapshot prefix
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"snapshot_{timestamp}.jpg"
     thumb_filename = f"thumb_{timestamp}.jpg"
 
@@ -118,7 +118,6 @@ def create_snapshot():
     os.makedirs(save_dir, exist_ok=True)
     os.makedirs(thumb_dir, exist_ok=True)
 
-    import cv2
     frame = camera._capture_frame()
     h, w = frame.shape[:2]
 
@@ -147,8 +146,12 @@ def create_snapshot():
     db.session.commit()
 
     base_url = _get_base_url()
-    response = make_response(jsonify(snapshot.to_dict(base_url=base_url)), 201)
-    return _add_cors(response)
+
+    return _json_response({
+        "status": "success",
+        "message": "Snapshot created successfully",
+        "data": snapshot.to_dict(base_url=base_url),
+    }, 201)
 
 
 @snapshots_bp.route("/<int:snapshot_id>", methods=["DELETE"])
@@ -172,8 +175,11 @@ def delete_snapshot(snapshot_id):
     db.session.delete(snapshot)
     db.session.commit()
 
-    response = make_response(jsonify({"message": "Snapshot deleted", "id": snapshot_id}), 200)
-    return _add_cors(response)
+    return _json_response({
+        "status": "success",
+        "message": "Snapshot deleted successfully",
+        "data": {"id": snapshot_id},
+    })
 
 
 @snapshots_bp.route("/file/<path:filename>")
@@ -181,12 +187,13 @@ def delete_snapshot(snapshot_id):
 def serve_file(filename):
     """Serve a full-resolution snapshot image."""
     safe_path = os.path.join(SNAPSHOTS_DIR, filename)
+
     if not os.path.realpath(safe_path).startswith(os.path.realpath(SNAPSHOTS_DIR)):
-        response = make_response(jsonify({"error": "Invalid path"}), 403)
-        return _add_cors(response)
+        return _json_response({"status": "error", "message": "Invalid path"}, 403)
+
     if not os.path.exists(safe_path):
-        response = make_response(jsonify({"error": "File not found"}), 404)
-        return _add_cors(response)
+        return _json_response({"status": "error", "message": "File not found"}, 404)
+
     response = make_response(send_file(safe_path, mimetype="image/jpeg"))
     return _add_cors(response)
 
@@ -198,12 +205,13 @@ def serve_thumbnail(filename):
     thumb_dir = os.path.join(SNAPSHOTS_DIR, "thumbs")
     thumb_filename = f"thumb_{filename.replace('snapshot_', '')}"
     safe_path = os.path.join(thumb_dir, thumb_filename)
+
     if not os.path.realpath(safe_path).startswith(os.path.realpath(SNAPSHOTS_DIR)):
-        response = make_response(jsonify({"error": "Invalid path"}), 403)
-        return _add_cors(response)
+        return _json_response({"status": "error", "message": "Invalid path"}, 403)
+
     if not os.path.exists(safe_path):
-        response = make_response(jsonify({"error": "Thumbnail not found"}), 404)
-        return _add_cors(response)
+        return _json_response({"status": "error", "message": "Thumbnail not found"}, 404)
+
     response = make_response(send_file(safe_path, mimetype="image/jpeg"))
     return _add_cors(response)
 
@@ -213,12 +221,19 @@ def serve_thumbnail(filename):
 def latest_snapshot():
     """Return the most recent snapshot."""
     snapshot = Snapshot.query.order_by(Snapshot.created_at.desc()).first()
+
     if not snapshot:
-        response = make_response(jsonify({"message": "No snapshots yet"}), 404)
-        return _add_cors(response)
+        return _json_response({
+            "status": "error",
+            "message": "No snapshots yet",
+        }, 404)
+
     base_url = _get_base_url()
-    response = make_response(jsonify(snapshot.to_dict(base_url=base_url)))
-    return _add_cors(response)
+
+    return _json_response({
+        "status": "success",
+        "data": snapshot.to_dict(base_url=base_url),
+    })
 
 
 @snapshots_bp.route("/stats", methods=["GET"])
@@ -236,5 +251,7 @@ def snapshot_stats():
     stats = {source: count for source, count in counts}
     stats["total"] = sum(stats.values())
 
-    response = make_response(jsonify(stats))
-    return _add_cors(response)
+    return _json_response({
+        "status": "success",
+        "data": stats,
+    })
